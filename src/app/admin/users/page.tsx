@@ -118,7 +118,7 @@ export default function AdminUsers() {
       {/* Glassmorphism Sidebar (Bên trái) */}
       <aside className="hidden lg:flex flex-col h-screen fixed left-0 top-0 w-72 z-40 bg-white/5 border-r border-white/5 backdrop-blur-md">
         <div className="p-10">
-          <h1 className="font-serif text-2xl font-bold uppercase tracking-[0.2em] leading-none text-white">EMBER &amp; ASH</h1>
+          <h1 className="font-serif text-2xl font-bold uppercase tracking-[0.2em] leading-none text-white">Smoke &amp; Oak</h1>
           <p className="text-[10px] text-white/40 tracking-[0.3em] uppercase mt-2">Hệ thống Quản trị</p>
         </div>
         

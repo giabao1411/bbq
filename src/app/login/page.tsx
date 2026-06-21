@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from '@/lib/supabase';
-import { useSearchParams } from "next/navigation";
+// import { useSearchParams } from "next/navigation";
 
 
 export default function LoginPage() {
@@ -21,10 +21,13 @@ export default function LoginPage() {
     window.addEventListener("mousemove", handleMouseMove);
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
-  const searchParams = useSearchParams();
-  const nextTarget = searchParams.get("next") || "/";
+  // const searchParams = useSearchParams();
+  // const nextTarget = searchParams.get("next") || "/";
   const handleGoogleLogin = async () => {
     try {
+      // LẤY NEXT TARGET TRỰC TIẾP TỪ WINDOW
+      const params = new URLSearchParams(window.location.search);
+      const nextTarget = params.get("next") || "/";
       // Đính kèm mục tiêu điều hướng tiếp theo vào link callback
       const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
       await supabase.auth.signInWithOAuth({
@@ -39,6 +42,9 @@ export default function LoginPage() {
   const handleFacebookLogin = async () => {
     try {
       // Đính kèm mục tiêu điều hướng tiếp theo vào link callback
+      // LẤY NEXT TARGET TRỰC TIẾP TỪ WINDOW
+      const params = new URLSearchParams(window.location.search);
+      const nextTarget = params.get("next") || "/";
       const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextTarget)}`;
       await supabase.auth.signInWithOAuth({
         provider: "facebook",

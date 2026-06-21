@@ -24,7 +24,7 @@ export default function BookingPage() {
 
   // State quản lý dữ liệu form tương tác
   const [formData, setFormData] = useState({
-    guests: 4,
+    guests: 1,
     date: '', 
     time: '18:30',
     notes: ''
@@ -95,12 +95,13 @@ export default function BookingPage() {
     } else {
       alert('Cảm ơn quý khách! Yêu cầu đặt bàn của bạn đã được tiếp nhận. Vui lòng chờ nhà hàng xác nhận.');
       setFormData({
-        guests: 4,
+        guests: 1,
         date: todayStr,
         time: '18:30',
         notes: ''
       });
       setSelectedDate(new Date());
+      router.push("/booking-history");
     }
     setLoading(false);
   };
@@ -247,23 +248,19 @@ export default function BookingPage() {
         {/* Banner Hero */}
       <section className="relative h-[450px] flex items-center justify-center overflow-hidden">
   <div className="absolute inset-0 z-0">
-    {/* 🟢 ĐÃ SỬA: Thay link ảnh vỡ bằng một link ảnh BBQ chất lượng cao (Full HD/2K) */}
     <div 
       className="w-full h-full bg-cover bg-center transition-transform duration-[10000ms] hover:scale-110" 
       style={{ backgroundImage: "url('https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1920')" }}
     >
     </div>
-    {/* Lớp phủ tối dìm nền xuống giúp nổi bật chữ trắng */}
     <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"></div>
   </div>
 
   <div className="relative z-10 text-center max-w-4xl px-4">
-    {/* 🟢 ĐÃ SỬA: Thay font-display thành font-serif để chữ có chân sang trọng, giảm mập chữ (bỏ font-bold hoặc giữ font-medium) */}
     <h1 className="font-serif text-5xl md:text-6xl font-medium text-white mb-4 tracking-wide">
       Đặt Bàn Trực Tuyến
     </h1>
     
-    {/* Cập nhật lại màu chữ mô tả cho sáng và dễ đọc hơn trên nền tối */}
     <p className="font-vietnam text-zinc-300 text-sm md:text-base max-w-2xl mx-auto leading-relaxed tracking-wide font-light">
       Trải nghiệm tinh hoa nướng củi trong không gian sang trọng và ấm cúng. Hãy để chúng tôi chuẩn bị cho bữa tiệc của bạn.
     </p>

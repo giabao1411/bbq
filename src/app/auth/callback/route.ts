@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   // Sau khi đăng nhập xong, hướng người dùng về trang đặt bàn
-  const next = searchParams.get('next') ?? '/booking'
+  const next = searchParams.get('next') || '/'
 
   if (code) {
     // SỬA TẠI ĐÂY: Thêm await trước cookies() vì cookies() bây giờ là một Promise
@@ -17,22 +17,23 @@ export async function GET(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: any) {
-            cookieStore.set({ name, value, ...options })
-          },
-          remove(name: string, options: any) {
-            cookieStore.set({ name, value: '', ...options })
-          },
+          getAll() { return cookieStore.getAll() },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set({ name, value, ...options })
+              )
+            } catch (error) {
+              // Có thể bỏ qua lỗi này nếu chạy trong Server Component/Route handler
+            }
+          }
         },
       }
     )
     
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(new URL(next,origin))
     }
   }
 

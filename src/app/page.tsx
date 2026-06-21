@@ -6,31 +6,9 @@ export default function HomePage() {
   return (
     <div className="bg-[#121414] text-[#e2e2e2] font-sans antialiased min-h-screen selection:bg-[#ffb3ac] selection:text-[#680008]">
       
-      {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 bg-[#1a1c1c] shadow-md flex items-center justify-between px-[20px] h-16 transition-all">
-        {/* Nút Menu bên trái */}
-        <div className="flex items-center gap-3 active:scale-95 transition-transform cursor-pointer">
-          <span className="material-symbols-outlined text-[#c8c6c5]">menu</span>
-        </div>
-        
-        {/* Tên thương hiệu ở giữa */}
-        <Link href="/" className="font-serif text-2xl font-bold text-[#e2e2e2] tracking-tighter uppercase no-underline">
-          SMOKE & OAK
-        </Link>
-        
-        {/* Cụm chức năng bên phải: Giỏ hàng + Nút Đăng nhập/Profile tự động bind dữ liệu */}
-        <div className="flex items-center gap-md">
-          {/* Biểu tượng túi hàng cũ của bạn */}
-          <div className="flex items-center gap-3 active:scale-95 transition-transform cursor-pointer text-[#c8c6c5] hover:text-white">
-            <span className="material-symbols-outlined">shopping_bag</span>
-          </div>
+      
 
-          {/* NHÚNG COMPONENT XỬ LÝ AUTH DỮ LIỆU TẠI ĐÂY */}
-          <AuthButton />
-        </div>
-      </header>
-
-      <main className="pt-16">
+      
         {/* Hero Section */}
         <section className="relative h-[751px] w-full overflow-hidden flex items-center">
           <div className="absolute inset-0 z-0">
@@ -58,13 +36,13 @@ export default function HomePage() {
             </p>
             <div className="flex flex-col md:flex-row gap-3">
               <Link 
-                href="/booking" 
+                href="/login?next=/booking" 
                 className="px-16 py-4 bg-[#ffb3ac] text-[#680008] font-semibold text-center rounded-lg active:scale-95 transition-all shadow-lg shadow-[#ffb3ac]/20 uppercase tracking-wider no-underline"
               >
                 Đặt Bàn Ngay
               </Link>
               <a 
-                href="#menu" 
+                href="/booking-history" 
                 className="px-16 py-4 border border-[#8e9192] text-[#e2e2e2] font-semibold text-center rounded-lg active:scale-95 transition-all hover:bg-[#333535] uppercase tracking-wider no-underline"
               >
                 Xem Thực Đơn
@@ -245,7 +223,7 @@ export default function HomePage() {
             </form>
           </div>
         </section>
-      </main>
+     
 
       {/* Footer */}
       <footer className="w-full bg-[#0c0f0f] border-t border-[#444748]/20 flex flex-col items-center gap-4 py-10 px-[20px] text-center mb-20 md:mb-0">

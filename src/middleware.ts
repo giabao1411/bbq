@@ -12,13 +12,24 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) { return request.cookies.get(name)?.value },
-        set(name: string, value: string, options: any) { request.cookies.set({ name, value, ...options }) },
-        remove(name: string, options: any) { request.cookies.set({ name, value: '', ...options }) },
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set({ name, value, ...options })
+          )
+          response = NextResponse.next({
+            request: { headers: request.headers },
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set({ name, value, ...options })
+          )
+        },
       },
     }
   )
-
+  // await supabase.auth.getSession()
   // Lấy thông tin user hiện tại từ Cookie
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -40,10 +51,25 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/', request.url))
     }
   }
+  // Nếu CHƯA đăng nhập mà vào đặt bàn -> đá sang /login kèm parameter ?next=/booking
+  // Sửa đoạn này trong middleware.ts
+  if (request.nextUrl.pathname.startsWith('/booking')) {
+    if (!user) {
+      const loginUrl = new URL('/login', request.url)
+      // Đảm bảo truyền chính xác URL hiện tại vào làm tham số
+      loginUrl.searchParams.set('next', request.nextUrl.pathname + request.nextUrl.search)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+  if (user && request.nextUrl.pathname.startsWith("/login")) {
+
+    const nextTarget = request.nextUrl.searchParams.get('next') || '/'
+    return NextResponse.redirect(new URL(nextTarget, request.url))
+  }
 
   return response
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/booking/:path*'],
+  matcher: ['/admin/:path*', '/booking/:path*', '/login',],
 }

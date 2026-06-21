@@ -4,24 +4,41 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
+// Import thư viện lịch react-day-picker và cấu hình tiếng Việt
+import { DayPicker } from 'react-day-picker';
+import { vi } from 'date-fns/locale';
+import { format } from 'date-fns';
+
 export default function BookingPage() {
   const router = useRouter();
-  
-  // Quản lý trạng thái các bước trong giao diện (Giờ chỉ còn Step 1 và Step 2)
-  const [currentStep, setCurrentStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [todayStr, setTodayStr] = useState<string>('');
 
-  // State quản lý dữ liệu form (Đã bỏ table_type)
+  // Khởi tạo trạng thái ngày chọn (Mặc định là ngày hôm nay)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+
+  // Danh sách khung giờ cố định
+  const afternoonSlots = ['17:00', '17:30', '18:00'];
+  const eveningSlots = ['18:30', '19:00', '19:30', '20:00', '20:30', '21:00'];
+
+  // State quản lý dữ liệu form tương tác
   const [formData, setFormData] = useState({
-    guests: 2,
-    date: new Date().toISOString().split('T')[0], // Mặc định lấy ngày hôm nay
-    time: '19:00', // Mặc định giờ tối phổ biến
+    guests: 4,
+    date: '', 
+    time: '18:30',
     notes: ''
   });
 
-  // Kiểm tra trạng thái đăng nhập của người dùng khi truy cập trang
+  // Khởi tạo ngày hiện tại và kiểm tra auth
   useEffect(() => {
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const localISODate = new Date(now.getTime() - tzOffset).toISOString().split('T')[0];
+    
+    setTodayStr(localISODate);
+    setFormData(prev => ({ ...prev, date: localISODate }));
+
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -33,7 +50,15 @@ export default function BookingPage() {
     checkUser();
   }, [router]);
 
-  // Hàm xử lý tăng giảm số lượng khách hàng (Giới hạn từ 1 đến 20 người)
+  // Tự động đồng bộ ngày được chọn từ DayPicker vào dữ liệu formData gửi lên database
+  useEffect(() => {
+    if (selectedDate) {
+      const formatted = format(selectedDate, 'yyyy-MM-dd');
+      setFormData(prev => ({ ...prev, date: formatted }));
+    }
+  }, [selectedDate]);
+
+  // Hàm xử lý tăng giảm số lượng khách hàng
   const adjustGuests = (val: number) => {
     setFormData(prev => ({
       ...prev,
@@ -41,16 +66,17 @@ export default function BookingPage() {
     }));
   };
 
-  // Điều hướng qua lại giữa các bước của Form và cuộn mượt lên đầu trang
-  const nextStep = (step: number) => {
-    setCurrentStep(step);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Xử lý gửi Form chính thức lên hệ thống Supabase
+  // Xử lý gửi dữ liệu lên hệ thống Supabase
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+    if (!userId) {
+      alert('Vui lòng đăng nhập để thực hiện đặt bàn.');
+      return;
+    }
+    if (!formData.date) {
+      alert('Vui lòng chọn ngày đặt bàn.');
+      return;
+    }
     setLoading(true);
 
     const { error } = await supabase.from('bookings').insert([
@@ -60,224 +86,328 @@ export default function BookingPage() {
         booking_time: formData.time,
         guests_count: formData.guests,
         special_requests: formData.notes,
-        status: 'pending' // Trạng thái mặc định chờ Admin kiểm duyệt
+        status: 'pending'
       }
     ]);
 
-    setLoading(false);
     if (error) {
       alert('Đặt bàn thất bại: ' + error.message);
     } else {
       alert('Cảm ơn quý khách! Yêu cầu đặt bàn của bạn đã được tiếp nhận. Vui lòng chờ nhà hàng xác nhận.');
-      // Reset form về trạng thái ban đầu và quay về bước 1
       setFormData({
-        guests: 2,
-        date: new Date().toISOString().split('T')[0],
-        time: '19:00',
+        guests: 4,
+        date: todayStr,
+        time: '18:30',
         notes: ''
       });
-      setCurrentStep(1);
+      setSelectedDate(new Date());
     }
+    setLoading(false);
   };
 
-  // Tiêu đề động hiển thị theo từng bước
-  const getStepTitle = () => {
-    return currentStep === 1 ? "Chi tiết bàn đặt" : "Hoàn tất đặt bàn";
-  };
+  // Xác định mốc ngày hôm nay để chặn chọn các ngày cũ trong quá khứ
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   return (
-    <div className="bg-[#121414] text-[#e2e2e2] font-sans min-h-screen overflow-x-hidden">
+    <div className="bg-[#121212] text-white font-vietnam min-h-screen">
       
-      {/* Khung nhúng font và style bổ trợ Material Icon toàn cục */}
+      {/* Cấu hình CSS Global: Sửa lỗi hiển thị cấu trúc layout và nút bấm của react-day-picker v9 */}
+     {/* Cập nhật lại bộ CSS Global này để cố định vị trí nút bấm trong hộp lịch */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
-        .material-symbols-outlined {
-          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        /* Giữ khung bọc lịch có kích thước cố định và làm gốc tọa độ */
+        .custom-booking-calendar .rdp-root {
+          position: relative !important;
+          width: 100% !important;
         }
-        .glass-panel {
-          background: rgba(30, 32, 32, 0.6);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(142, 145, 146, 0.1);
+
+        /* Định vị khu vực tiêu đề tháng và năm */
+        .custom-booking-calendar .rdp-caption,
+        .custom-booking-calendar .rdp-month_caption,
+        .custom-booking-calendar .rdp-header {
+          display: flex !important;
+          justify-content: center !important;
+          align-items: center !important;
+          width: 100% !important;
+          margin-bottom: 20px !important;
+          position: relative !important;
+          height: 36px !important;
+        }
+
+        /* Chữ tiêu đề "Tháng Sáu 2026" nằm chính giữa */
+        .custom-booking-calendar .rdp-caption_label,
+        .custom-booking-calendar .rdp-month_caption_label {
+          font-size: 15px !important;
+          font-weight: 700 !important;
+          color: #ffffff !important;
+          text-transform: capitalize !important;
+        }
+
+        /* QUAN TRỌNG: Cố định thanh chứa nút điều hướng bám chặt vào khung Header của lịch */
+        .custom-booking-calendar .rdp-nav {
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          right: 0 !important;
+          width: 100% !important;
+          height: 36px !important;
+          display: flex !important;
+          justify-content: space-between !important;
+          align-items: center !important;
+          pointer-events: none !important; /* Ngăn chặn block click chuột vùng tiêu đề */
+          z-index: 10 !important;
+        }
+
+        /* Tùy biến kiểu dáng nút bấm lùi/tiến tháng */
+        .custom-booking-calendar .rdp-nav .rdp-button,
+        .custom-booking-calendar .rdp-nav button {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 32px !important;
+          height: 32px !important;
+          background: rgba(255, 255, 255, 0.05) !important;
+          border: none !important;
+          cursor: pointer !important;
+          pointer-events: auto !important; /* Mở khóa vùng bấm chuột cho nút */
+          border-radius: 6px !important;
+          transition: all 0.2s ease !important;
+          color: #bc1c24 !important;
+        }
+
+        .custom-booking-calendar .rdp-nav .rdp-button:hover,
+        .custom-booking-calendar .rdp-nav button:hover {
+          background: rgba(255, 255, 255, 0.15) !important;
+        }
+
+        /* Cấu hình hiển thị lưới lịch các ngày */
+        .custom-booking-calendar .rdp-table,
+        .custom-booking-calendar .rdp-month_grid {
+          width: 100% !important;
+          border-collapse: collapse !important;
+        }
+
+        .custom-booking-calendar .rdp-head_row,
+        .custom-booking-calendar .rdp-weekdays {
+          display: flex !important;
+          justify-content: space-between !important;
+          margin-bottom: 12px !important;
+        }
+
+        .custom-booking-calendar .rdp-head_cell,
+        .custom-booking-calendar .rdp-weekday {
+          width: 38px !important;
+          text-align: center !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          color: rgba(255, 255, 255, 0.4) !important;
+        }
+
+        .custom-booking-calendar .rdp-row,
+        .custom-booking-calendar .rdp-week {
+          display: flex !important;
+          justify-content: space-between !important;
+          margin-top: 8px !important;
+        }
+
+        /* Định dạng các ô ngày trong tháng */
+        .custom-booking-calendar .rdp-cell,
+        .custom-booking-calendar .rdp-day {
+          width: 38px !important;
+          height: 38px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 13px !important;
+          border-radius: 6px !important;
+          color: #ffffff !important;
+          cursor: pointer !important;
+          pointer-events: auto !important;
+          background: transparent !important;
+          border: none !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .custom-booking-calendar .rdp-day:hover:not(.rdp-day_disabled) {
+          background: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        /* Vô hiệu hóa tương tác click chuột các ngày đã qua trong quá khứ */
+        .custom-booking-calendar .rdp-day_disabled,
+        .custom-booking-calendar .rdp-day[disabled] {
+          opacity: 0.15 !important;
+          cursor: not-allowed !important;
+          pointer-events: none !important;
         }
       `}</style>
 
-      {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 bg-[#1a1c1c] shadow-md flex items-center justify-between px-6 h-16 border-b border-zinc-800/40">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-[#ffb3ac] cursor-pointer active:scale-95 transition-transform">menu</span>
-        </div>
-        <h1 className="font-bold text-lg text-[#e2e2e2] tracking-tighter uppercase" style={{ fontFamily: "'Playfair Display', serif" }}>
-          SMOKE & OAK
-        </h1>
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-[#ffb3ac] cursor-pointer active:scale-95 transition-transform">shopping_bag</span>
-        </div>
-      </header>
+     
 
-      {/* Toàn bộ khu vực chính chứa Form */}
-      <main className="pt-24 pb-32 px-5 max-w-2xl mx-auto">
-        
-        {/* Bộ chỉ dẫn các bước (Thu gọn lại thành 2 nút tròn chỉ dẫn) */}
-        <div className="flex justify-between items-center mb-8 relative max-w-[240px] mx-auto">
-          <div className="absolute top-1/2 left-0 w-full h-[1px] bg-zinc-800 -z-10"></div>
-          
-          {/* Vòng tròn bước 1 */}
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-[#121414] transition-all text-xs ${
-            currentStep > 1 ? 'bg-[#ffb3ac] text-[#680008]' : 'bg-[#ffb3ac] text-[#680008] shadow-lg shadow-[#ffb3ac]/20'
-          }`}>
-            {currentStep > 1 ? <span className="material-symbols-outlined text-sm font-bold">check</span> : "1"}
-          </div>
+      <main className="pb-20">
+        {/* Banner Hero */}
+      <section className="relative h-[450px] flex items-center justify-center overflow-hidden">
+  <div className="absolute inset-0 z-0">
+    {/* 🟢 ĐÃ SỬA: Thay link ảnh vỡ bằng một link ảnh BBQ chất lượng cao (Full HD/2K) */}
+    <div 
+      className="w-full h-full bg-cover bg-center transition-transform duration-[10000ms] hover:scale-110" 
+      style={{ backgroundImage: "url('https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1920')" }}
+    >
+    </div>
+    {/* Lớp phủ tối dìm nền xuống giúp nổi bật chữ trắng */}
+    <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"></div>
+  </div>
 
-          {/* Vòng tròn bước 2 */}
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-4 border-[#121414] transition-all text-xs ${
-            currentStep === 2 ? 'bg-[#ffb3ac] text-[#680008] shadow-lg shadow-[#ffb3ac]/20' : 'bg-zinc-800 text-zinc-400'
-          }`}>
-            2
-          </div>
-        </div>
+  <div className="relative z-10 text-center max-w-4xl px-4">
+    {/* 🟢 ĐÃ SỬA: Thay font-display thành font-serif để chữ có chân sang trọng, giảm mập chữ (bỏ font-bold hoặc giữ font-medium) */}
+    <h1 className="font-serif text-5xl md:text-6xl font-medium text-white mb-4 tracking-wide">
+      Đặt Bàn Trực Tuyến
+    </h1>
+    
+    {/* Cập nhật lại màu chữ mô tả cho sáng và dễ đọc hơn trên nền tối */}
+    <p className="font-vietnam text-zinc-300 text-sm md:text-base max-w-2xl mx-auto leading-relaxed tracking-wide font-light">
+      Trải nghiệm tinh hoa nướng củi trong không gian sang trọng và ấm cúng. Hãy để chúng tôi chuẩn bị cho bữa tiệc của bạn.
+    </p>
+  </div>
+</section>
 
-        {/* Tiêu đề Động */}
-        <h2 className="text-2xl font-bold mb-6 text-center text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-          {getStepTitle()}
-        </h2>
+        {/* Form Đặt Bàn chính */}
+        <section className="max-w-5xl mx-auto px-6 -mt-12 relative z-20">
+          <div className="bg-[#1a1a1a] border border-white/5 rounded-xl shadow-2xl p-6 md:p-8">
+            <form onSubmit={handleSubmit} className="space-y-10">
+              
+              {/* Bước 1 & 2: Chọn Ngày và Giờ */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                
+                {/* BƯỚC 1: CHỌN NGÀY */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">1</span>
+                    <h2 className="text-lg font-bold uppercase tracking-wide">Chọn Ngày</h2>
+                  </div>
+                  
+                  <div className="bg-[#242424] p-4 rounded-xl border border-white/5 flex justify-center custom-booking-calendar">
+                    <DayPicker
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={setSelectedDate}
+                      locale={vi}
+                      disabled={{ before: today }}
+                      // Sửa đổi cấu hình component theo đúng tiêu chuẩn phiên bản v9
+                      components={{
+                        Chevron: (props) => {
+                          if (props.orientation === 'left') {
+                            return <span className="text-lg font-bold select-none px-1 text-[#bc1c24]">&lt;</span>;
+                          }
+                          return <span className="text-lg font-bold select-none px-1 text-[#bc1c24]">&gt;</span>;
+                        }
+                      }}
+                      classNames={{
+                        selected: '!bg-[#bc1c24] !text-white font-bold rounded-lg shadow-lg shadow-[#bc1c24]/20 opacity-100',
+                        today: '!text-[#bc1c24] font-bold border border-[#bc1c24]/30 rounded-lg',
+                      }}
+                    />
+                  </div>
+                </div>
 
-        {/* Khối Form lớn */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* BƯỚC 1: THÔNG TIN SỐ LƯỢNG / NGÀY / GIỜ */}
-          {currentStep === 1 && (
-            <div className="space-y-4">
-              {/* Bộ chọn số lượng khách */}
-              <div className="glass-panel p-5 rounded-xl">
-                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Số lượng khách</label>
-                <div className="flex items-center justify-between">
-                  <button 
-                    type="button" 
-                    className="w-12 h-12 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center active:scale-90 transition-transform" 
-                    onClick={() => adjustGuests(-1)}
-                  >
-                    <span className="material-symbols-outlined">remove</span>
-                  </button>
-                  <span className="text-4xl font-light text-white font-mono">{formData.guests}</span>
-                  <button 
-                    type="button" 
-                    className="w-12 h-12 rounded-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center active:scale-90 transition-transform" 
-                    onClick={() => adjustGuests(1)}
-                  >
-                    <span className="material-symbols-outlined">add</span>
-                  </button>
+                {/* BƯỚC 2: CHỌN GIỜ */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">2</span>
+                    <h2 className="text-lg font-bold uppercase tracking-wide">Chọn Giờ</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-widest text-gray-400 block mb-2">Buổi Chiều</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {afternoonSlots.map((slot) => {
+                          const isSelected = formData.time === slot;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, time: slot })}
+                              className={`py-2 px-3 text-sm rounded-lg font-bold transition-all ${
+                                isSelected 
+                                  ? 'bg-[#bc1c24] text-white ring-2 ring-[#bc1c24]/50' 
+                                  : 'border border-white/10 text-white hover:border-[#bc1c24]'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-widest text-gray-400 block mb-2">Buổi Tối (Cao Điểm)</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {eveningSlots.map((slot) => {
+                          const isSelected = formData.time === slot;
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, time: slot })}
+                              className={`py-2 px-3 text-sm rounded-lg font-bold transition-all ${
+                                isSelected 
+                                  ? 'bg-[#bc1c24] text-white ring-2 ring-[#bc1c24]/50' 
+                                  : 'border border-white/10 text-white hover:border-[#bc1c24]'
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Ô chọn ngày */}
-              <div className="glass-panel p-5 rounded-xl">
-                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Chọn ngày</label>
-                <input 
-                  type="date"
-                  required
-                  className="w-full bg-zinc-800/80 border border-zinc-700/50 rounded-lg h-14 px-4 focus:border-[#ffb3ac] outline-none transition-colors text-white text-base scheme-dark"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              {/* Bước 3: Số Lượng Khách */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">3</span>
+                  <h2 className="text-lg font-bold uppercase tracking-wide">Số Lượng Khách</h2>
+                </div>
+                <div className="bg-[#242424] py-4 px-8 rounded-xl flex items-center justify-between border border-white/5 max-w-xl mx-auto">
+                  <button type="button" onClick={() => adjustGuests(-1)} className="w-10 h-10 rounded-full border border-white/20 text-white flex items-center justify-center font-bold text-lg hover:border-[#bc1c24]">-</button>
+                  <div className="text-center">
+                    <span className="text-3xl font-bold text-[#bc1c24]">{formData.guests.toString().padStart(2, '0')}</span>
+                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Người Lớn</p>
+                  </div>
+                  <button type="button" onClick={() => adjustGuests(1)} className="w-10 h-10 rounded-full border border-white/20 text-white flex items-center justify-center font-bold text-lg hover:border-[#bc1c24]">+</button>
+                </div>
+              </div>
+
+              {/* Bước 4: Ghi Chú & Yêu Cầu Riêng */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">4</span>
+                  <h2 className="text-lg font-bold uppercase tracking-wide">Ghi Chú & Yêu Cầu Riêng</h2>
+                </div>
+                <textarea 
+                  className="w-full bg-[#242424] border border-white/10 rounded-xl p-4 text-sm text-white focus:border-[#bc1c24] outline-none resize-none placeholder:text-gray-600" 
+                  placeholder="Ví dụ: Tiệc sinh nhật, dị ứng đậu phộng, yêu cầu ghế trẻ em..." 
+                  rows={3}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
               </div>
 
-              {/* Ô chọn giờ */}
-              <div className="glass-panel p-5 rounded-xl">
-                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 block">Chọn khung giờ đến</label>
-                <input 
-                  type="time"
-                  required
-                  className="w-full bg-zinc-800/80 border border-zinc-700/50 rounded-lg h-14 px-4 focus:border-[#ffb3ac] outline-none transition-colors text-white text-base scheme-dark font-mono"
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                />
+              {/* Nút Xác Nhận Gửi Form */}
+              <div className="pt-4 flex flex-col items-center space-y-4">
+                <p className="text-xs text-gray-400">© Chúng tôi sẽ giữ bàn trong vòng 15 phút sau giờ hẹn.</p>
+                <button type="submit" disabled={loading} className="w-full sm:w-auto sm:min-w-[300px] bg-[#bc1c24] text-white py-3.5 rounded-xl text-sm font-bold uppercase tracking-widest hover:opacity-90 transition-all disabled:opacity-50">
+                  {loading ? 'Đang xử lý...' : 'Xác nhận đặt bàn'}
+                </button>
               </div>
-
-              {/* Nút tiến tới bước tiếp theo */}
-              <button 
-                type="button" 
-                className="w-full h-16 bg-[#ffb3ac] text-[#680008] font-bold rounded-xl active:scale-95 transition-transform uppercase tracking-widest text-xs shadow-lg shadow-[#ffb3ac]/10" 
-                onClick={() => nextStep(2)}
-              >
-                Tiếp theo
-              </button>
-            </div>
-          )}
-
-          {/* BƯỚC 2: GHI CHÚ VÀ XÁC NHẬN TỔNG HỢP (SUBMIT FORM) */}
-          {currentStep === 2 && (
-            <div className="space-y-4">
-              <div className="glass-panel p-5 rounded-xl space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 block">Yêu cầu đặc biệt</label>
-                  <textarea 
-                    className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-3 focus:border-[#ffb3ac] outline-none transition-colors text-zinc-200 text-sm h-28 resize-none" 
-                    placeholder="VD: Sinh nhật, dị ứng thức ăn, bàn cạnh cửa sổ..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  />
-                </div>
-
-                {/* Phần tóm tắt thông số trực quan */}
-                <div className="border-t border-zinc-800 pt-4 space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-zinc-400">Ngày:</span>
-                    <span className="font-bold text-white">{formData.date}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-400">Giờ đến:</span>
-                    <span className="font-bold text-white">{formData.time}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-zinc-400">Số lượng khách:</span>
-                    <span className="font-bold text-white">{formData.guests} người</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nút Submit gửi toàn bộ dữ liệu chính thức lên Supabase */}
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full h-20 bg-[#ffb3ac] text-[#680008] font-bold text-sm rounded-xl active:scale-95 transition-transform uppercase tracking-[0.2em] shadow-xl shadow-[#ffb3ac]/5 relative overflow-hidden group disabled:opacity-50"
-              >
-                <span className="relative z-10">{loading ? 'Đang xử lý...' : 'Xác nhận đặt bàn'}</span>
-                <div className="absolute inset-0 bg-white/10 translate-x-full group-active:translate-x-0 transition-transform duration-300"></div>
-              </button>
-
-              <button 
-                type="button" 
-                className="w-full py-2 text-zinc-500 text-xs uppercase tracking-wider hover:text-[#ffb3ac] transition-colors font-medium" 
-                onClick={() => nextStep(1)}
-              >
-                Quay lại chỉnh sửa
-              </button>
-            </div>
-          )}
-
-        </form>
+            </form>
+          </div>
+        </section>
       </main>
-
-      {/* BottomNavBar */}
-      <nav className="fixed bottom-0 w-full z-50 bg-[#1e2020] rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.4)] border-t border-zinc-800/80 flex justify-around items-center h-20 px-2 pb-safe">
-        <a className="flex flex-col items-center justify-center text-zinc-400 hover:text-[#ffb3ac] transition-colors" href="#">
-          <span className="material-symbols-outlined">home</span>
-          <span className="text-[10px] font-medium mt-0.5">Home</span>
-        </a>
-        <a className="flex flex-col items-center justify-center text-zinc-400 hover:text-[#ffb3ac] transition-colors" href="#">
-          <span className="material-symbols-outlined">restaurant_menu</span>
-          <span className="text-[10px] font-medium mt-0.5">Menu</span>
-        </a>
-        <a className="flex flex-col items-center justify-center text-[#ffb3ac] font-bold" href="#">
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>event_available</span>
-          <span className="text-[10px] font-medium mt-0.5">Book Now</span>
-        </a>
-        <a className="flex flex-col items-center justify-center text-zinc-400 hover:text-[#ffb3ac] transition-colors" href="#">
-          <span className="material-symbols-outlined">person</span>
-          <span className="text-[10px] font-medium mt-0.5">Profile</span>
-        </a>
-      </nav>
-
     </div>
   );
 }

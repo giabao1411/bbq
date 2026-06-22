@@ -3,8 +3,13 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 export async function middleware(request: NextRequest) {
+  // Tạo một bản sao của request headers
+  const requestHeaders = new Headers(request.headers);
+  
+  // Đính kèm URL hiện tại vào header 'x-url' để Layout trên Server có thể đọc được
+  requestHeaders.set("x-url", request.nextUrl.pathname);
   let response = NextResponse.next({
-    request: { headers: request.headers },
+    request: { headers: requestHeaders },
   })
 
   const supabase = createServerClient(
@@ -71,5 +76,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/booking/:path*', '/login',],
+  matcher: ['/admin/:path*', '/booking/:path*', '/login',"/((?!api|_next/static|_next/image|favicon.ico).*)"],
 }

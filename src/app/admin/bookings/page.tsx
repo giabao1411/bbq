@@ -1,332 +1,303 @@
 'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import HeaderAdmin from '@/components/HeaderAdmin';
+import { useRouter, usePathname } from "next/navigation";
 
-export default function UserBookings() {
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'history'>('upcoming');
+interface Booking {
+  id: string;
+  booking_date: string;
+  booking_time: string;
+  guests_count: number;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  special_requests?: string;
+  created_at: string;
+}
 
-  // Fetch danh sách đặt bàn của khách hàng
-  const fetchUserBookings = async () => {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('*, profiles(full_name)')
-      .order('booking_date', { ascending: true });
+interface CalendarDay {
+  dayOfWeek: string;
+  dayNum: string;
+  dateStr: string;
+}
 
-    if (error) {
-      console.error("Lỗi lấy dữ liệu lịch sử đặt bàn:", error.message);
-      return;
-    }
-    if (data) {
-      setBookings(data);
-    }
+export default function AdminBookings() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  
+  // State quản lý danh sách đặt bàn và bộ lọc
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  
+  // Mặc định ban đầu chọn ngày 2023-10-25 theo UI mẫu
+  const [selectedDate, setSelectedDate] = useState('2026-06-22');
+  // State lưu danh sách 7 ngày hiển thị trên slider dựa theo ngày đang chọn
+  const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
+
+  // Hàm tạo ra chuỗi thứ trong tuần (Tiếng Việt)
+  const getVietnameseDayOfWeek = (date: Date) => {
+    const day = date.getDay();
+    return day === 0 ? 'CN' : `TH ${day + 1}`;
   };
 
+  // Hàm cập nhật danh sách 7 ngày xung quanh ngày được chọn (Ngày chọn nằm ở giữa hoặc đầu)
+  const generateCalendarSlider = (centerDateStr: string) => {
+    const centerDate = new Date(centerDateStr);
+    const days: CalendarDay[] = [];
+
+    // Tạo dải 7 ngày (lấy ngày được chọn làm tâm, lùi 3 ngày và tiến 3 ngày)
+    for (let i = -3; i <= 3; i++) {
+      const loopDate = new Date(centerDate);
+      loopDate.setDate(centerDate.getDate() + i);
+
+      const yyyy = loopDate.getFullYear();
+      const mm = String(loopDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(loopDate.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+
+      days.push({
+        dayOfWeek: getVietnameseDayOfWeek(loopDate),
+        dayNum: dd,
+        dateStr: dateStr
+      });
+    }
+    setCalendarDays(days);
+  };
+
+  // Mỗi khi selectedDate thay đổi -> Tính lại dải ngày Slider và gọi API lấy dữ liệu mới
   useEffect(() => {
-    fetchUserBookings();
+    generateCalendarSlider(selectedDate);
+    fetchBookings();
+  }, [selectedDate]);
 
-    // Lắng nghe thay đổi dữ liệu Realtime từ Supabase
-    const channels = supabase
-      .channel('user-realtime-bookings')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-        fetchUserBookings();
-      })
-      .subscribe();
+  // Định dạng hiển thị tiêu đề Tháng/Năm (Ví dụ: THÁNG 10, 2023)
+  const formatMonthYearHeader = (dateStr: string) => {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "THÁNG 10, 2023";
+    return `THÁNG ${date.getMonth() + 1}, ${date.getFullYear()}`;
+  };
 
-    return () => {
-      supabase.removeChannel(channels);
-    };
-  }, []);
-
-  // Hàm xử lý Hủy đặt bàn trực tiếp
-  const handleCancelBooking = async (id: number) => {
-    const confirmCancel = window.confirm("Bạn có chắc chắn muốn hủy đơn đặt bàn này không?");
-    if (!confirmCancel) return;
-
-    const { error } = await supabase
+  // Fetch dữ liệu từ Supabase (Lọc trực tiếp theo selectedDate)
+  const fetchBookings = async () => {
+    const { data } = await supabase
       .from('bookings')
-      .update({ status: 'cancelled' })
-      .eq('id', id);
+      .select('*')
+      .eq('booking_date', selectedDate);
 
-    if (error) {
-      alert("Không thể hủy bàn: " + error.message);
+    if (data && data.length > 0) {
+      setBookings(data);
+      // console.log(data);
     } else {
-      // Cập nhật State cục bộ tối ưu hóa UI phản hồi nhanh
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' } : b));
+      // Dữ liệu Mockup dự phòng khớp theo ảnh nếu DB trống
+      if (selectedDate === '2023-10-25') {
+        setBookings([
+         
+        ]);
+      } else {
+        setBookings([]); // Ngày khác mặc định trống để chờ bạn thêm mới dữ liệu dữ trữ
+        console.log("vào đây else")
+      }
     }
   };
 
-  // Phân loại danh sách theo Tab
-  // Sắp tới: Trạng thái là pending (đang chờ) hoặc confirmed (đã duyệt)
-  const upcomingBookings = bookings.filter(b => b.status === 'pending' || b.status === 'confirmed');
-  // Lịch sử: Trạng thái là completed (đã hoàn thành) hoặc cancelled (đã hủy)
-  const historyBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
+  const updateBookingStatus = async (id: string, newStatus: 'pending' | 'confirmed' | 'cancelled') => {
+    const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id);
+    if (error) alert(error.message);
+    else fetchBookings();
+  };
+
+  const filteredBookings = bookings.filter((b) => {
+    // const matchesSearch = b.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) || b.phone_number.includes(searchQuery);
+    const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
+    return matchesStatus;
+  });
+
+  const getNavLinkClass = (path: string) => {
+    return "flex flex-col items-center justify-center" + (pathname === path ? " text-white" : " text-white/40");
+  };
+
+  // Kích hoạt ô chọn lịch ẩn khi click nút "Xem lịch"
+  const handleOpenCalendar = () => {
+    if (dateInputRef.current) {
+      dateInputRef.current.showPicker(); // Hàm tiêu chuẩn kích hoạt giao diện Lịch của trình duyệt
+    }
+  };
 
   return (
-    <div className="bg-[#121414] text-[#e2e2e2] font-sans min-h-screen overflow-x-hidden">
-      
-      {/* Khung Style cho font, Google Icons và Glassmorphism Effect */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
-        .material-symbols-outlined {
-          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .glass-card {
-          background: rgba(30, 32, 32, 0.6);
-          backdrop-filter: blur(16px);
-          border: 1px solid rgba(142, 145, 146, 0.12);
-        }
-      `}</style>
+    <div className="flex min-h-screen overflow-hidden font-body-md bg-[#0c0f0f] text-[#e2e2e2]">
+      <HeaderAdmin/>
 
-      {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 shadow-md bg-[#1a1c1c] flex items-center justify-between px-6 h-16 border-b border-zinc-800/50">
-        <div className="flex items-center gap-4">
-          <button className="active:scale-95 transition-transform text-[#ffb3ac]">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-          <h1 className="font-bold text-lg text-[#e2e2e2] tracking-tighter uppercase" style={{ fontFamily: "'Playfair Display', serif" }}>
-            SMOKE & OAK
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="active:scale-95 transition-transform text-[#ffb3ac]">
-            <span className="material-symbols-outlined">shopping_bag</span>
-          </button>
-        </div>
-      </header>
+      <main className="flex-1 lg:ml-72 flex flex-col h-screen relative overflow-hidden bg-[#121414]">
+        {/* Header */}
+        <header className="flex items-center justify-between px-6 md:px-10 h-20 bg-[#121414]/80 backdrop-blur-md sticky top-0 z-30 border-b border-white/5">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95">
+              <span className="material-symbols-outlined text-xl">arrow_back</span>
+            </Link>
+            <h2 className="text-xs font-semibold text-white/60 uppercase tracking-[0.3em]">Hệ thống Quản trị / Quản lý đặt bàn</h2>
+          </div>
+        </header>
 
-      {/* Toàn bộ vùng nội dung chính */}
-      <main className="pt-24 pb-32 px-5 max-w-3xl mx-auto">
-        
-        {/* User Profile Summary Section */}
-        <section className="mb-6">
-          <div className="glass-card rounded-xl p-5 flex items-center justify-between shadow-lg relative overflow-hidden">
-            <div className="relative z-10 flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full border-2 border-[#ffb3ac] overflow-hidden bg-zinc-800">
-                <img 
-                  className="w-full h-full object-cover" 
-                  alt="Avatar" 
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnMG5-iXR4sM5JQrirDZQ-0bQNDUDyjv0W7K3oeMmVHIhw86Sqb8ZJyyqV2iRl7SS1p3F4hwl2Jo-l3JpSUt1brlQyOgRbE5E8SwPs-Ab8OHN8xiJ8h_VnUPEwr8ji6SPLc5e1weNvd2cfNipXx-uQx29aQWpNHxzP2HulhM3Fq9rRnINt1Gd8vUdJspixqMNZhg-3htix08qAM_HzalKJWohbvxf6Na9ZZMqDpO3hpaNpKBcJxIWZUSI8EphbtjWRvChvGV__R98"
+        {/* Nội dung chính */}
+        <section className="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 pb-32 lg:pb-10">
+          
+          {/* Tiêu đề & CTA */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="space-y-1">
+              <h3 className="font-serif text-3xl font-bold text-white leading-tight">Quản lý đặt bàn</h3>
+              <p className="text-white/60 text-sm font-light">Giám sát và điều phối lượt khách đến nhà hàng trong ngày.</p>
+            </div>
+            <button className="bg-[#93000a] text-white px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-xl shadow-[#93000a]/20">
+              <span className="material-symbols-outlined text-base">add_circle</span>
+              Tạo đặt bàn mới
+            </button>
+          </div>
+
+          {/* Khu vực Chọn ngày & Lịch */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              {/* Hiển thị Tháng / Năm động */}
+              <span className="text-xs font-bold tracking-widest text-white/50 uppercase">
+                {formatMonthYearHeader(selectedDate)}
+              </span>
+
+              {/* Nút Xem Lịch thực tế */}
+              <div className="relative">
+                <button 
+                  onClick={handleOpenCalendar}
+                  className="text-white/60 hover:text-white text-xs flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 transition-all active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-sm">calendar_month</span>
+                  Xem lịch
+                </button>
+                {/* Ô input date ẩn để dùng UI lịch mặc định siêu mượt của trình duyệt */}
+                <input 
+                  type="date"
+                  ref={dateInputRef}
+                  value={selectedDate}
+                  onChange={(e) => {
+                    if (e.target.value) setSelectedDate(e.target.value);
+                  }}
+                  className="absolute pointer-events-none opacity-0 right-0 top-0 w-0 h-0"
                 />
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  {bookings[0]?.profiles?.full_name || 'Nguyễn Minh Quân'}
-                </h2>
-                <div className="flex items-center gap-1 text-[#ffb3ac] mt-0.5">
-                  <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>stars</span>
-                  <span className="text-xs font-semibold uppercase tracking-wider">Thành viên Vàng • 2,450 điểm</span>
+            </div>
+
+            {/* Thanh trượt chọn ngày trong tuần (Tự động cập nhật theo ngày chọn) */}
+            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+              {calendarDays.map((item) => {
+                const isSelected = selectedDate === item.dateStr;
+                return (
+                  <button
+                    key={item.dateStr}
+                    onClick={() => setSelectedDate(item.dateStr)}
+                    className={`flex flex-col items-center justify-center min-w-[56px] h-20 rounded-2xl transition-all ${
+                      isSelected 
+                        ? 'bg-[#93000a] text-white shadow-lg shadow-[#93000a]/30 scale-105 font-bold' 
+                        : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <span className="text-[10px] tracking-wider uppercase opacity-80 mb-1">{item.dayOfWeek}</span>
+                    <span className="text-lg font-semibold">{item.dayNum}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Thanh Tìm kiếm & Lọc */}
+          <div className="flex flex-col sm:flex-row gap-3 items-center w-full">
+            <div className="relative w-full sm:flex-1">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-lg">search</span>
+              <input 
+                type="text" 
+                placeholder="Tìm tên khách, số điện thoại..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-[#1a1d1d] text-sm text-white pl-11 pr-4 py-3 rounded-xl border border-white/5 focus:outline-none focus:border-[#93000a] w-full"
+              />
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <select 
+                value={statusFilter} 
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-[#1a1d1d] text-xs px-4 py-3 rounded-xl border border-white/5 text-white/80 focus:outline-none cursor-pointer flex-1 sm:flex-none"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="pending">Chưa đến</option>
+                <option value="arrived">Đã đến</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Danh sách Đặt bàn */}
+          <div className="space-y-4">
+            {filteredBookings.map((booking) => (
+              <div key={booking.id} className="relative bg-[#161919] border border-white/5 rounded-2xl p-5 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group transition-all hover:border-white/10">
+                {booking.status === 'pending' && (
+                  <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-[#93000a] rounded-r-md"></div>
+                )}
+                <div className="space-y-3.5 pl-2">
+                  <div>
+                    <h4 className="font-serif text-lg font-bold text-white group-hover:text-amber-400 transition-colors"></h4>
+                    <p className="text-xs text-white/40 font-light flex items-center gap-1.5 mt-1">
+                      <span className="material-symbols-outlined text-sm">phone</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs font-medium text-white/70">
+                    <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md">
+                      <span className="material-symbols-outlined text-sm text-white/40">groups</span>{booking.guests_count} Khách
+                    </span>
+                    <span className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-md">
+                      <span className="material-symbols-outlined text-sm text-white/40">table_restaurant</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center gap-3 border-t md:border-t-0 border-white/5 pt-3 md:pt-0">
+                 
+
+                  <div className="flex items-center gap-2 text-xl font-bold text-white md:text-2xl">
+                    <span className="material-symbols-outlined text-white/40 text-lg md:text-xl">schedule</span>{booking.booking_time}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {booking.status === 'pending' ? (
+                      <>
+                        <button onClick={() => updateBookingStatus(booking.id, 'confirmed')} className="bg-[#1d2121] border border-white/10 hover:bg-white/10 text-white text-xs px-4 py-2 rounded-xl transition-all font-semibold">CHƯA ĐẾN</button>
+                        <button onClick={() => updateBookingStatus(booking.id, 'cancelled')} className="p-2 text-white/40 hover:text-red-400 rounded-lg"><span className="material-symbols-outlined text-base">cancel</span></button>
+                      </>
+                    ) : booking.status === 'completed' ? (
+                      <span className="text-[10px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span> ĐÃ ĐẾN
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full bg-white/5 text-white/30 border border-white/5">ĐÃ HỦY</span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="relative z-10 text-right hidden sm:block">
-              <button className="px-4 py-1.5 rounded-full border border-zinc-700 text-sm text-[#e2e2e2] hover:bg-zinc-800 transition-colors active:scale-95">
-                Chỉnh sửa
-              </button>
-            </div>
+            ))}
+
+            {filteredBookings.length === 0 && (
+              <div className="text-center py-16 bg-white/5 rounded-2xl border border-white/5 text-sm text-white/40">
+                Không tìm thấy lượt đặt bàn nào trong ngày được chọn.
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Navigation Tabs */}
-        <div className="flex border-b border-zinc-800 mb-6 relative">
-          <button 
-            onClick={() => setActiveTab('upcoming')}
-            className={`flex-1 py-3 text-center font-bold text-xs tracking-widest transition-colors duration-300 relative ${activeTab === 'upcoming' ? 'text-[#ffb3ac]' : 'text-zinc-500'}`}
-          >
-            SẮP TỚI
-            <div className={`absolute bottom-0 left-0 w-full h-[2px] bg-[#ffb3ac] transition-opacity duration-300 ${activeTab === 'upcoming' ? 'opacity-100' : 'opacity-0'}`} />
-          </button>
-          
-          <button 
-            onClick={() => setActiveTab('history')}
-            className={`flex-1 py-3 text-center font-bold text-xs tracking-widest transition-colors duration-300 relative ${activeTab === 'history' ? 'text-[#ffb3ac]' : 'text-zinc-500'}`}
-          >
-            LỊCH SỬ
-            <div className={`absolute bottom-0 left-0 w-full h-[2px] bg-[#ffb3ac] transition-opacity duration-300 ${activeTab === 'history' ? 'opacity-100' : 'opacity-0'}`} />
-          </button>
-        </div>
-
-        {/* Danh sách thẻ đặt bàn dựa vào trạng thái Tab hoạt động */}
-        <div className="space-y-4">
-          
-          {/* TAP SẮP TỚI */}
-          {activeTab === 'upcoming' && (
-            upcomingBookings.length === 0 ? (
-              <p className="text-center text-zinc-500 py-8 italic text-sm">Bạn không có lịch đặt bàn nào sắp tới.</p>
-            ) : (
-              upcomingBookings.map((b) => (
-                <div 
-                  key={b.id} 
-                  className={`glass-card rounded-xl p-5 flex flex-col gap-4 border-l-4 shadow-md transition-all duration-300 ${
-                    b.status === 'confirmed' ? 'border-[#ffb3ac]' : 'border-zinc-600'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <span className="text-[#ffb3ac] text-[10px] tracking-widest font-mono uppercase">Mã số: #SA-{b.id}</span>
-                      <h3 className="font-bold text-base text-white mt-1" style={{ fontFamily: "'Playfair Display', serif" }}>
-                        Smoke & Oak - Premium BBQ
-                      </h3>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${
-                      b.status === 'confirmed' ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-500/20' : 'bg-amber-950/50 text-amber-400 border border-amber-500/20'
-                    }`}>
-                      {b.status === 'confirmed' ? 'Đã xác nhận' : 'Đang chờ'}
-                    </span>
-                  </div>
-
-                  {/* Chi tiết thông số đặt bàn */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-y border-zinc-800/60 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-zinc-400 text-lg">calendar_today</span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-zinc-500 uppercase">Ngày</span>
-                        <span className="text-xs font-semibold text-zinc-300">{b.booking_date}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-zinc-400 text-lg">schedule</span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-zinc-500 uppercase">Giờ</span>
-                        <span className="text-xs font-semibold text-zinc-300">{b.booking_time || '19:30'}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-zinc-400 text-lg">group</span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-zinc-500 uppercase">Số khách</span>
-                        <span className="text-xs font-semibold text-zinc-300">{b.guests_count} Người</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-zinc-400 text-lg">deck</span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-zinc-500 uppercase">Khu vực</span>
-                        <span className="text-xs font-semibold text-zinc-300 capitalize">{b.table_type === 'terrace' ? 'Sân thượng' : 'Trong nhà'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Phần chân Thẻ */}
-                  <div className="flex items-center justify-between pt-1">
-                    <div className="flex -space-x-2">
-                      <div className="w-8 h-8 rounded-full border-2 border-[#121414] overflow-hidden bg-zinc-800">
-                        <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwzi_viih0zMQO6YI2MEhNlzOu-0jLFZHH9f4DJjxoIzqUb8ViE95tau-4E3m4zsPUsxThu2U53Jt1t16fsUx0afTpWVKrPy-VsmcYODPMdR8WCV_-UCo0tzjRaHx4yp9hnq6SYx_2pJuVgUlDGmxB2Ya49FQUmOTI8ea78W4JBAdPMu3DGE2cf5oc_iUFvYz1SjLBKsv4k6GJcv1Df4LOVLMpbQmP8CTo5xQ3Hq85XP9tPqoduUoM_FU_GOr4yVPSWQNv6AMv3jQ" alt="food" />
-                      </div>
-                      <div className="w-8 h-8 rounded-full border-2 border-[#121414] flex items-center justify-center bg-zinc-800 text-[11px] font-bold text-zinc-400">+2</div>
-                    </div>
-                    
-                    {/* Nút hủy kích hoạt trực tiếp lên database */}
-                    <button 
-                      onClick={() => handleCancelBooking(b.id)}
-                      className="flex items-center gap-1 text-rose-400 text-xs font-bold hover:underline active:scale-95 transition-all"
-                    >
-                      <span className="material-symbols-outlined text-sm">cancel</span>
-                      Hủy đặt bàn
-                    </button>
-                  </div>
-                </div>
-              ))
-            )
-          )}
-
-          {/* TAP LỊCH SỬ KHÁCH HÀNG */}
-          {activeTab === 'history' && (
-            historyBookings.length === 0 ? (
-              <p className="text-center text-zinc-500 py-8 italic text-sm">Bạn chưa có lịch sử đơn đặt bàn cũ.</p>
-            ) : (
-              historyBookings.map((b) => (
-                <div 
-                  key={b.id} 
-                  className={`glass-card rounded-xl p-5 flex flex-col gap-4 border-l-4 transition-opacity duration-300 ${
-                    b.status === 'completed' ? 'border-zinc-700 opacity-80 hover:opacity-100' : 'border-rose-900/40 opacity-60'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <span className="text-zinc-500 text-[10px] tracking-widest font-mono uppercase">Mã số: #SA-{b.id}</span>
-                      <h3 className="font-bold text-base text-zinc-300 mt-1" style={{ fontFamily: "'Playfair Display', serif" }}>
-                        {b.table_type === 'vip' ? "Chef's Table Experience" : "Smoke & Oak Restaurant"}
-                      </h3>
-                    </div>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      b.status === 'completed' ? 'bg-zinc-800 text-zinc-400' : 'bg-rose-950/40 text-rose-400'
-                    }`}>
-                      {b.status === 'completed' ? 'Đã hoàn thành' : 'Đai hủy'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-4 border-y border-zinc-800/40 py-3 text-xs">
-                    <div className="flex flex-col">
-                      <span className="text-zinc-500 text-[10px] uppercase">Ngày</span>
-                      <span className="font-semibold text-zinc-400 mt-0.5">{b.booking_date}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-zinc-500 text-[10px] uppercase">Số khách</span>
-                      <span className="font-semibold text-zinc-400 mt-0.5">{b.guests_count} Người</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-zinc-500 text-[10px] uppercase">{b.status === 'completed' ? 'Tích lũy' : 'Lý do'}</span>
-                      <span className={`font-semibold mt-0.5 ${b.status === 'completed' ? 'text-[#ffb3ac]' : 'text-rose-400/80'}`}>
-                        {b.status === 'completed' ? '+150 pts' : 'Thay đổi kế hoạch'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {b.status === 'completed' && (
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex gap-0.5 text-[#ffb3ac]">
-                        {[...Array(5)].map((_, i) => (
-                          <span key={i} className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                        ))}
-                      </div>
-                      <button className="flex items-center gap-1 text-[#ffb3ac] text-xs font-bold hover:underline active:scale-95 transition-all">
-                        <span className="material-symbols-outlined text-sm">restart_alt</span>
-                        Đặt lại bàn này
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )
-          )}
-
-        </div>
+        {/* Mobile Nav */}
+        <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 bg-[#121414]/95 backdrop-blur-lg border-t border-white/5">
+          <a className={getNavLinkClass("/")} href="/"><span className="material-symbols-outlined">home</span><span className="text-[10px] uppercase font-bold mt-1">Trang chủ</span></a>
+          <a className={getNavLinkClass("/admin/users")} href="/admin/users"><span className="material-symbols-outlined">group</span><span className="text-[10px] uppercase font-bold mt-1">Người dùng</span></a>
+          <a className={getNavLinkClass("/#menu")} href="/#menu"><span className="material-symbols-outlined">menu_book</span><span className="text-[10px] uppercase font-bold mt-1">Món ăn</span></a>
+          <a className={getNavLinkClass("/admin/bookings")} href="/admin/bookings"><span className="material-symbols-outlined">event_available</span><span className="text-[10px] uppercase font-bold mt-1">Đặt bàn</span></a>
+        </nav>
       </main>
-
-      {/* Footer giữ nguyên */}
-      <footer className="w-full bg-[#161818] border-t border-zinc-800/40 flex flex-col items-center gap-4 py-8 px-5 text-center mb-20">
-        <h2 className="font-bold text-base text-[#ffb3ac] tracking-widest" style={{ fontFamily: "'Playfair Display', serif" }}>SMOKE & OAK</h2>
-        <div className="flex flex-wrap justify-center gap-5 text-xs text-zinc-400">
-          <a className="hover:text-[#ffb3ac] transition-colors" href="#">Contact Us</a>
-          <a className="hover:text-[#ffb3ac] transition-colors" href="#">Privacy Policy</a>
-          <a className="hover:text-[#ffb3ac] transition-colors" href="#">Terms of Service</a>
-          <a className="hover:text-[#ffb3ac] transition-colors" href="#">Locations</a>
-        </div>
-        <p className="text-[11px] text-zinc-600 mt-2">© 2024 Smoke & Oak Premium BBQ. All Rights Reserved.</p>
-      </footer>
-
-      {/* BottomNavBar cố định chân trang điều hướng */}
-      <nav className="fixed bottom-0 w-full z-50 rounded-t-xl bg-[#1e2020] border-t border-zinc-800 shadow-[0_-4px_12px_rgba(0,0,0,0.4)] flex justify-around items-center h-20 px-2 pb-safe">
-        <button className="flex flex-col items-center justify-center text-zinc-400 hover:text-[#ffb3ac] transition-colors">
-          <span className="material-symbols-outlined">home</span>
-          <span className="text-[10px] font-medium mt-0.5">Home</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-zinc-400 hover:text-[#ffb3ac] transition-colors">
-          <span className="material-symbols-outlined">restaurant_menu</span>
-          <span className="text-[10px] font-medium mt-0.5">Menu</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-zinc-400 hover:text-[#ffb3ac] transition-colors">
-          <span className="material-symbols-outlined">event_available</span>
-          <span className="text-[10px] font-medium mt-0.5">Book Now</span>
-        </button>
-        <button className="flex flex-col items-center justify-center text-[#ffb3ac] font-bold">
-          <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-          <span className="text-[10px] font-medium mt-0.5">Profile</span>
-        </button>
-      </nav>
-
     </div>
   );
 }

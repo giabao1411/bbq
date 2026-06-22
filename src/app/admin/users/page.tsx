@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import HeaderAdmin from '@/components/HeaderAdmin';
+import { useRouter, usePathname } from "next/navigation";
 interface UserProfile {
   id: string;
   full_name: string | null;
@@ -17,6 +19,8 @@ export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const router = useRouter();
+  const pathname = usePathname();
   // 1. Bổ sung State để lưu thông tin Admin/User đang đăng nhập hệ thống
   const [currentUser, setCurrentUser] = useState<{ name: string; avatar: string; role: string } | null>(null);
 // 2. Hàm lấy thông tin tài khoản đang thao tác (đang đăng nhập)
@@ -111,53 +115,18 @@ export default function AdminUsers() {
   const totalStaff = users.length;
   const activeStaff = users.filter(u => u.status === 'active').length;
   const pendingStaff = users.filter(u => u.status === 'pending').length;
+  const getNavLinkClass = (path: string) => {
+    const baseClass = "flex flex-col items-center justify-center";
+    const activeClass = " text-white";
+    const inactiveClass = " text-white/40";
+
+    return baseClass + (pathname === path ? activeClass : inactiveClass);
+  };
 
   return (
     <div className="flex min-h-screen overflow-hidden font-body-md bg-[#0c0f0f] text-[#e2e2e2]">
       
-      {/* Glassmorphism Sidebar (Bên trái) */}
-      <aside className="hidden lg:flex flex-col h-screen fixed left-0 top-0 w-72 z-40 bg-white/5 border-r border-white/5 backdrop-blur-md">
-        <div className="p-10">
-          <h1 className="font-serif text-2xl font-bold uppercase tracking-[0.2em] leading-none text-white">Smoke &amp; Oak</h1>
-          <p className="text-[10px] text-white/40 tracking-[0.3em] uppercase mt-2">Hệ thống Quản trị</p>
-        </div>
-        
-        <nav className="flex-1 mt-4 px-4 space-y-1">
-          <a className="flex items-center gap-4 text-white/60 hover:text-white px-4 py-3.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer group" href="#">
-            <span className="material-symbols-outlined transition-transform group-hover:scale-110">dashboard</span>
-            <span className="text-sm font-medium tracking-wide">Dashboard</span>
-          </a>
-          <a className="flex items-center gap-4 bg-[#93000a] text-white rounded-xl px-4 py-3.5 shadow-xl shadow-[#93000a]/10 transition-transform active:scale-95" href="#">
-            <span className="material-symbols-outlined">group</span>
-            <span className="text-sm font-medium tracking-wide">Quản lý người dùng</span>
-          </a>
-          <a className="flex items-center gap-4 text-white/60 hover:text-white px-4 py-3.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer group" href="#">
-            <span className="material-symbols-outlined transition-transform group-hover:scale-110">restaurant_menu</span>
-            <span className="text-sm font-medium tracking-wide">Danh mục món ăn</span>
-          </a>
-          <a className="flex items-center gap-4 text-white/60 hover:text-white px-4 py-3.5 rounded-xl hover:bg-white/5 transition-all cursor-pointer group" href="#">
-            <span className="material-symbols-outlined transition-transform group-hover:scale-110">event_available</span>
-            <span className="text-sm font-medium tracking-wide">Quản lý đặt bàn</span>
-          </a>
-        </nav>
-
-        {/* User Profile động ở cuối Sidebar */}
-        <div className="p-6 m-4 rounded-2xl bg-white/5 border border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden">
-              <img 
-                className="w-full h-full object-cover" 
-                src={currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100'} 
-                alt="User Avatar" 
-              />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-white">{currentUser?.name || 'Đang tải...'}</p>
-              <p className="text-[10px] text-white/50 uppercase tracking-tighter">{currentUser?.role || 'Hệ thống'}</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+      <HeaderAdmin/>
 
       {/* Main Content Container (Bên phải) */}
       <main className="flex-1 lg:ml-72 flex flex-col h-screen relative overflow-hidden bg-[#121414]">
@@ -175,10 +144,7 @@ export default function AdminUsers() {
               <span className="material-symbols-outlined text-xl">arrow_back</span>
             </Link>
 
-            {/* Nút Menu Mobile toggle khi thu nhỏ màn hình */}
-            <button className="lg:hidden p-2 text-white ml-2">
-              <span className="material-symbols-outlined">menu</span>
-            </button>
+           
             
             <h2 className="text-xs font-semibold text-white/60 uppercase tracking-[0.3em]">Hệ thống Quản trị / Người dùng</h2>
           </div>
@@ -375,17 +341,21 @@ export default function AdminUsers() {
 
         {/* Mobile Navigation (Bottom Bar) */}
         <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 bg-[#121414]/95 backdrop-blur-lg border-t border-white/5">
-          <a className="flex flex-col items-center justify-center text-white/40" href="#">
+          <a className={getNavLinkClass("/")} href="/">
             <span className="material-symbols-outlined">home</span>
             <span className="text-[10px] uppercase font-bold mt-1">Trang chủ</span>
           </a>
-          <a className="flex flex-col items-center justify-center text-white" href="#">
+          <a className={getNavLinkClass("/admin/users")} href="/admin/users">
             <span className="material-symbols-outlined">group</span>
             <span className="text-[10px] uppercase font-bold mt-1">Người dùng</span>
           </a>
-          <a className="flex flex-col items-center justify-center text-white/40" href="#">
+          <a className={getNavLinkClass("/#menu")} href="/#menu">
             <span className="material-symbols-outlined">menu_book</span>
             <span className="text-[10px] uppercase font-bold mt-1">Món ăn</span>
+          </a>
+          <a className={getNavLinkClass("/admin/bookings")} href="/admin/bookings">
+            <span className="material-symbols-outlined transition-transform group-hover:scale-110">event_available</span>
+            <span className="text-sm font-medium tracking-wide">Quản lý đặt bàn</span>
           </a>
         </nav>
       </main>

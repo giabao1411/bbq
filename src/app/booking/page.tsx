@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { DayPicker } from 'react-day-picker';
 import { vi } from 'date-fns/locale';
 import { format } from 'date-fns';
+import NavUserForMobile from '@/components/MenuUserForMobile';
 
 export default function BookingPage() {
   const router = useRouter();
@@ -27,7 +28,8 @@ export default function BookingPage() {
     guests: 1,
     date: '', 
     time: '18:30',
-    notes: ''
+    notes: '',
+    phone:'',
   });
 
   // Khởi tạo ngày hiện tại và kiểm tra auth
@@ -86,6 +88,7 @@ export default function BookingPage() {
         booking_time: formData.time,
         guests_count: formData.guests,
         special_requests: formData.notes,
+        phone_number: formData.phone,
         status: 'pending'
       }
     ]);
@@ -98,7 +101,8 @@ export default function BookingPage() {
         guests: 1,
         date: todayStr,
         time: '18:30',
-        notes: ''
+        notes: '',
+        phone:''
       });
       setSelectedDate(new Date());
       router.push("/booking-history");
@@ -360,13 +364,50 @@ export default function BookingPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">3</span>
+                    <span className="material-symbols-outlined text-sm">phone</span>
+                    <h2 className="text-lg font-bold uppercase tracking-wide">Số điện thoại xác nhận</h2>
+                  </div>
+                  
+                  <div className="space-y-4">
+
+                    <div>
+
+                      <input
+                        type="tel"
+                        id="booking-phone"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        maxLength={10}
+                        onKeyDown={(e) => {
+                          // 1. Cho phép các phím chức năng hệ thống (Backspace, Delete, ArrowLeft, ArrowRight, Tab)
+                          const systemKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'];
+                          if (systemKeys.includes(e.key)) {
+                            return;
+                          }
+                          // Chặn trực tiếp trên thẻ input, chỉ cho nhập số từ 0-9
+                          if (!/[0-9]/.test(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        placeholder="Nhập số điện thoại để nhận lịch..."
+                        className="w-full bg-[#141414] text-white placeholder-gray-600 border border-gray-800 rounded field-sizing-content py-3 px-4 text-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 transition-all duration-200"
+                      />
+                    </div>
+
+
+                  </div>
                 </div>
+
+                
+                
               </div>
 
               {/* Bước 3: Số Lượng Khách */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">3</span>
+                  <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">4</span>
                   <h2 className="text-lg font-bold uppercase tracking-wide">Số Lượng Khách</h2>
                 </div>
                 <div className="bg-[#242424] py-4 px-8 rounded-xl flex items-center justify-between border border-white/5 max-w-xl mx-auto">
@@ -382,7 +423,7 @@ export default function BookingPage() {
               {/* Bước 4: Ghi Chú & Yêu Cầu Riêng */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">4</span>
+                  <span className="w-8 h-8 rounded-full bg-[#bc1c24] flex items-center justify-center text-white font-bold text-sm">5</span>
                   <h2 className="text-lg font-bold uppercase tracking-wide">Ghi Chú & Yêu Cầu Riêng</h2>
                 </div>
                 <textarea 
@@ -404,7 +445,9 @@ export default function BookingPage() {
             </form>
           </div>
         </section>
+          <NavUserForMobile/>
       </main>
+    
     </div>
   );
 }

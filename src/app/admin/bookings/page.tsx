@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import HeaderAdmin from '@/components/HeaderAdmin';
 import { useRouter, usePathname } from "next/navigation";
+import { toast,Toaster } from 'react-hot-toast';
 
 interface Booking {
   id: string;
@@ -13,6 +14,9 @@ interface Booking {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   special_requests?: string;
   created_at: string;
+  user_name?:  string;
+  profiles:{ full_name: string | null } | { full_name: string | null }[] | null;
+  phone_number?:string;
 }
 
 interface CalendarDay {
@@ -32,7 +36,7 @@ export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState('all');
   
   // Mặc định ban đầu chọn ngày 2023-10-25 theo UI mẫu
-  const [selectedDate, setSelectedDate] = useState('2026-06-22');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   // State lưu danh sách 7 ngày hiển thị trên slider dựa theo ngày đang chọn
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
 
@@ -71,6 +75,61 @@ export default function AdminBookings() {
     generateCalendarSlider(selectedDate);
     fetchBookings();
   }, [selectedDate]);
+  useEffect(() => {
+  // Nếu chưa có danh sách đặt bàn thì không chạy interval làm gì cho tốn hiệu năng
+  if (!bookings || bookings.length === 0) return;
+
+  console.log("🚀 Hệ thống nhắc giờ đặt bàn đã được kích hoạt!");
+
+  const checkComingBookings = () => {
+    // ĐƯA NOW VÀO TRONG NÀY: Để mỗi lần hàm chạy, nó phải lấy đúng giờ phút thực tế hiện tại
+    const now = new Date(); 
+    
+    bookings.forEach((booking: any) => {
+      // Chỉ check các bàn chưa hoàn thành hoặc chưa hủy
+      if (booking.status === 'completed' || booking.status === 'cancelled') return;
+      if (!booking.booking_time) return;
+
+      // 1. Bóc tách giờ và phút từ trường booking_time
+      const [bHours, bMinutes] = booking.booking_time.split(':').map(Number);
+      
+      // 2. Tạo mốc thời gian đặt bàn dựa trên ngày được chọn (selectedDate)
+      const bookingDateTime = new Date(selectedDate);
+      bookingDateTime.setHours(bHours, bMinutes, 0, 0);
+
+      // 3. Tính khoảng thời gian chênh lệch (phút)
+      const timeDiffInMinutes = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60);
+
+      console.log(`Kiểm tra khách ${booking.user_name || 'Khách vãng lai'}: Còn ${Math.round(timeDiffInMinutes)} phút.`);
+
+      // 4. Nếu thời gian sắp đến nằm trong khoảng từ 0 đến 30 phút -> Bắn thông báo ngay
+      if (timeDiffInMinutes > 0 && timeDiffInMinutes <= 30) {
+        const guestName = booking.user_name || 'Khách vãng lai';
+
+        toast.custom((t) => (
+          <div className="bg-amber-500 text-white p-4 rounded-lg shadow-lg flex flex-col gap-1 border border-amber-600 animate-bounce">
+            <span className="font-bold font-serif text-base">⏳ BÀN SẮP ĐẾN GIỜ!</span>
+            <span className="text-sm">
+              Khách <strong>{guestName}</strong> ({booking.guests_count} người) sẽ đến sau <strong>{Math.round(timeDiffInMinutes)} phút</strong> nữa ({booking.booking_time}).
+            </span>
+          </div>
+        ), { id: `alert-${booking.id}`, duration: 5000,  });
+      }
+    });
+  };
+
+  // Chạy kích hoạt lần đầu tiên ngay khi vừa vào trang (Không cần đợi 1 phút sau mới chạy)
+  checkComingBookings();
+
+  // Khởi tạo Interval quét liên tục sau mỗi 1 phút
+  const interval = setInterval(checkComingBookings, 60000); 
+
+  // Dọn dẹp interval khi chuyển trang hoặc reload để không bị lỗi rò rỉ bộ nhớ
+  return () => {
+    console.log("🧹 Đang dọn dẹp bộ nhớ nhắc giờ...");
+    clearInterval(interval);
+  };
+}, [bookings, selectedDate]);
 
   // Định dạng hiển thị tiêu đề Tháng/Năm (Ví dụ: THÁNG 10, 2023)
   const formatMonthYearHeader = (dateStr: string) => {
@@ -79,39 +138,51 @@ export default function AdminBookings() {
     return `THÁNG ${date.getMonth() + 1}, ${date.getFullYear()}`;
   };
 
+
   // Fetch dữ liệu từ Supabase (Lọc trực tiếp theo selectedDate)
   const fetchBookings = async () => {
     const { data } = await supabase
       .from('bookings')
-      .select('*')
+      .select(`
+      id,
+      created_at,
+      guests_count,
+      special_requests,
+      booking_time,
+      booking_date,
+      status,
+      phone_number,
+      profiles (
+        full_name
+      ) 
+    `)
       .eq('booking_date', selectedDate);
 
     if (data && data.length > 0) {
-      setBookings(data);
+      const rawData = data as unknown as Booking[]
+      const normalizedBookings: Booking[] = rawData.map((b) => ({
+      ...b,
+      user_name: (Array.isArray(b.profiles) ? b.profiles[0]?.full_name : b.profiles?.full_name) ?? 'Khách vãng lai'
+    }));
+      setBookings(normalizedBookings);
       // console.log(data);
     } else {
-      // Dữ liệu Mockup dự phòng khớp theo ảnh nếu DB trống
-      if (selectedDate === '2023-10-25') {
-        setBookings([
-         
-        ]);
-      } else {
+      
         setBookings([]); // Ngày khác mặc định trống để chờ bạn thêm mới dữ liệu dữ trữ
-        console.log("vào đây else")
-      }
+      
     }
   };
 
-  const updateBookingStatus = async (id: string, newStatus: 'pending' | 'confirmed' | 'cancelled') => {
+  const updateBookingStatus = async (id: string, newStatus: 'pending' | 'completed' | 'cancelled'|'confirmed') => {
     const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id);
     if (error) alert(error.message);
     else fetchBookings();
   };
 
   const filteredBookings = bookings.filter((b) => {
-    // const matchesSearch = b.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) || b.phone_number.includes(searchQuery);
+    const matchesSearch = b.user_name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
-    return matchesStatus;
+    return matchesStatus && matchesSearch;
   });
 
   const getNavLinkClass = (path: string) => {
@@ -127,13 +198,14 @@ export default function AdminBookings() {
 
   return (
     <div className="flex min-h-screen overflow-hidden font-body-md bg-[#0c0f0f] text-[#e2e2e2]">
+    <Toaster position="top-right" />
       <HeaderAdmin/>
 
       <main className="flex-1 lg:ml-72 flex flex-col h-screen relative overflow-hidden bg-[#121414]">
         {/* Header */}
         <header className="flex items-center justify-between px-6 md:px-10 h-20 bg-[#121414]/80 backdrop-blur-md sticky top-0 z-30 border-b border-white/5">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95">
+            <Link href="/"  className="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all active:scale-95">
               <span className="material-symbols-outlined text-xl">arrow_back</span>
             </Link>
             <h2 className="text-xs font-semibold text-white/60 uppercase tracking-[0.3em]">Hệ thống Quản trị / Quản lý đặt bàn</h2>
@@ -242,9 +314,9 @@ export default function AdminBookings() {
                 )}
                 <div className="space-y-3.5 pl-2">
                   <div>
-                    <h4 className="font-serif text-lg font-bold text-white group-hover:text-amber-400 transition-colors"></h4>
+                    <h4 className="font-serif text-lg font-bold text-white group-hover:text-amber-400 transition-colors">{booking.user_name}</h4>
                     <p className="text-xs text-white/40 font-light flex items-center gap-1.5 mt-1">
-                      <span className="material-symbols-outlined text-sm">phone</span>
+                      <span className="material-symbols-outlined text-sm">phone</span>{booking.phone_number}
                     </p>
                   </div>
                   <div className="flex items-center gap-4 text-xs font-medium text-white/70">
@@ -261,13 +333,13 @@ export default function AdminBookings() {
                  
 
                   <div className="flex items-center gap-2 text-xl font-bold text-white md:text-2xl">
-                    <span className="material-symbols-outlined text-white/40 text-lg md:text-xl">schedule</span>{booking.booking_time}
+                    <span className="material-symbols-outlined text-white/40 text-lg md:text-xl">schedule</span>{booking.booking_time ? booking.booking_time.split(":").slice(0,2).join(":"):'--:--'}
                   </div>
 
                   <div className="flex items-center gap-2">
                     {booking.status === 'pending' ? (
                       <>
-                        <button onClick={() => updateBookingStatus(booking.id, 'confirmed')} className="bg-[#1d2121] border border-white/10 hover:bg-white/10 text-white text-xs px-4 py-2 rounded-xl transition-all font-semibold">CHƯA ĐẾN</button>
+                        <button onClick={() => updateBookingStatus(booking.id, 'completed')} className="bg-[#1d2121] border border-white/10 hover:bg-white/10 text-white text-xs px-4 py-2 rounded-xl transition-all font-semibold">CHƯA ĐẾN</button>
                         <button onClick={() => updateBookingStatus(booking.id, 'cancelled')} className="p-2 text-white/40 hover:text-red-400 rounded-lg"><span className="material-symbols-outlined text-base">cancel</span></button>
                       </>
                     ) : booking.status === 'completed' ? (

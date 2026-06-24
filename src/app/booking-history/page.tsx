@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import NavUserMobile from '@/components/MenuUserForMobile';
 
 // 1. Định nghĩa kiểu dữ liệu (Interface)
 interface Booking {
@@ -320,7 +321,7 @@ const generateDisplayCode = (id: any) => {
           © 2024 SMOKE &amp; OAK HOUSE. ALL RIGHTS RESERVED.
         </div>
       </footer>
-
+            <NavUserMobile/>
     </div>
   );
 }

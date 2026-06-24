@@ -62,7 +62,7 @@ export default function LoginPage() {
         <div
           className="w-full h-full relative bg-cover bg-center transition-transform duration-100 ease-out"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1000')",
+            backgroundImage: "url('https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1469&auto=format&fit=crop')",
             transform: `scale(1.05) translate(${xy.x}px, ${xy.y}px)`,
           }}
           data-alt="A high-end, cinematic close-up of a premium outdoor fire pit at night."
@@ -136,7 +136,7 @@ export default function LoginPage() {
           </div>
 
           {/* Legal/Fine Print */}
-          <p className="mt-4 text-center text-xs text-zinc-500/80 px-4">
+          <p className="mt-4 text-center text-xs text-zinc px-4">
             Bằng cách tiếp tục, bạn đồng ý với Điều khoản Dịch vụ và Chính sách Bảo mật của Smoke & Oak.
           </p>
         </div>
@@ -144,8 +144,8 @@ export default function LoginPage() {
 
       {/* Simple Footer */}
       <footer className="relative z-10 w-full py-6 flex justify-center opacity-60">
-        <p className="text-xs text-zinc-400 tracking-wider">
-          © 2024 SMOKE & OAK SMOKEHOUSE. ALL RIGHTS RESERVED.
+        <p className="text-xs text-zinc tracking-wider">
+          © 2026 SMOKE & OAK SMOKEHOUSE. ALL RIGHTS RESERVED.
         </p>
       </footer>
     </div>

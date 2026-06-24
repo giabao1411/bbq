@@ -8,7 +8,11 @@ import AuthButton from '@/app/components/AuthButton';
 export default function Header() {
   const router = useRouter();
   const pathname = usePathname(); // Lấy đường dẫn hiện tại của trang (ví dụ: "/", "/booking")
- 
+ const isAdminPath = pathname.startsWith('/admin');
+ if(isAdminPath){
+     
+     return null;
+ }
 
   
 

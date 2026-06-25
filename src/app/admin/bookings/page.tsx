@@ -7,6 +7,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { toast,Toaster } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css'; // Import file CSS gốc
+import { registerLocale } from  "react-datepicker";
+import { vi } from 'date-fns/locale/vi';
 
 interface Booking {
   id: string;
@@ -26,6 +28,7 @@ interface CalendarDay {
   dayNum: string;
   dateStr: string;
 }
+registerLocale('vi', vi);
 
 export default function AdminBookings() {
   const router = useRouter();
@@ -266,8 +269,10 @@ export default function AdminBookings() {
                           setIsOpen(false);
                         }
                       }}
+                      
                       inline
                       dateFormat="dd/MM/yyyy"
+                      locale="vi"
                     />
                   </div>
                 )}

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import HeaderAdmin from '@/components/HeaderAdmin';
 import { useRouter, usePathname } from "next/navigation";
 import { toast,Toaster } from 'react-hot-toast';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css'; // Import file CSS gốc
 
 interface Booking {
   id: string;
@@ -28,7 +30,7 @@ interface CalendarDay {
 export default function AdminBookings() {
   const router = useRouter();
   const pathname = usePathname();
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  // const dateInputRef = useRef<HTMLInputElement>(null);
   
   // State quản lý danh sách đặt bàn và bộ lọc
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -39,6 +41,13 @@ export default function AdminBookings() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   // State lưu danh sách 7 ngày hiển thị trên slider dựa theo ngày đang chọn
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
+  const [isOpen, setIsOpen] = useState(false); // Trạng thái đóng/mở lịch
+
+  // Hàm xử lý khi click vào nút Xem lịch
+  const handleOpenCalendar = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setIsOpen(!isOpen); // Đảo ngược trạng thái đóng/mở
+  };
 
   // Hàm tạo ra chuỗi thứ trong tuần (Tiếng Việt)
   const getVietnameseDayOfWeek = (date: Date) => {
@@ -190,11 +199,11 @@ export default function AdminBookings() {
   };
 
   // Kích hoạt ô chọn lịch ẩn khi click nút "Xem lịch"
-  const handleOpenCalendar = () => {
-    if (dateInputRef.current) {
-      dateInputRef.current.showPicker(); // Hàm tiêu chuẩn kích hoạt giao diện Lịch của trình duyệt
-    }
-  };
+  // const handleOpenCalendar = () => {
+  //   if (dateInputRef.current) {
+  //     dateInputRef.current.showPicker(); // Hàm tiêu chuẩn kích hoạt giao diện Lịch của trình duyệt
+  //   }
+  // };
 
   return (
     <div className="flex min-h-screen overflow-hidden font-body-md bg-[#0c0f0f] text-[#e2e2e2]">
@@ -227,49 +236,56 @@ export default function AdminBookings() {
             </button>
           </div>
 
-          {/* Khu vực Chọn ngày & Lịch */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              {/* Hiển thị Tháng / Năm động */}
-              <span className="text-xs font-bold tracking-widest text-white/50 uppercase">
-                {formatMonthYearHeader(selectedDate)}
-              </span>
+        {/* Chọn ngày và xem lịch */}
+          <div className="w-full flex flex-col gap-4">
 
-              {/* Nút Xem Lịch thực tế */}
+            {/* HÀNG 1: TIÊU ĐỀ THÁNG VÀ NÚT BẤM XEM LỊCH */}
+            <div className="flex items-center justify-between w-full">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-white/70">
+                {formatMonthYearHeader(selectedDate)}
+              </h3>
+
+              {/* Container bọc nút để định vị hộp lịch */}
               <div className="relative">
-                <button 
+                <button
                   onClick={handleOpenCalendar}
-                  className="text-white/60 hover:text-white text-xs flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 transition-all active:scale-95"
+                  className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg border border-white/10 text-sm transition-all"
                 >
-                  <span className="material-symbols-outlined text-sm">calendar_month</span>
-                  Xem lịch
+                  <span>📅</span> Xem lịch
                 </button>
-                {/* Ô input date ẩn để dùng UI lịch mặc định siêu mượt của trình duyệt */}
-                <input 
-                  type="date"
-                  ref={dateInputRef}
-                  value={selectedDate}
-                  onChange={(e) => {
-                    if (e.target.value) setSelectedDate(e.target.value);
-                  }}
-                  className="absolute pointer-events-none opacity-0 right-0 top-0 w-0 h-0"
-                />
+
+                {/* Hộp lịch bay lên trên, không chiếm diện tích của hàng */}
+                {isOpen && (
+                  <div className="absolute top-[100%] right-0 mt-2 z-50 custom-datepicker-wrapper">
+                    <DatePicker
+                      selected={selectedDate ? new Date(selectedDate) : null}
+                      onChange={(date: Date | null) => {
+                        if (date) {
+                          const dateString = date.toISOString().split('T')[0];
+                          setSelectedDate(dateString);
+                          setIsOpen(false);
+                        }
+                      }}
+                      inline
+                      dateFormat="dd/MM/yyyy"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Thanh trượt chọn ngày trong tuần (Tự động cập nhật theo ngày chọn) */}
-            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+            {/* HÀNG 2: DẢI Ô CHỌN NGÀY NGANG (ĐOẠN CODE CỦA BẠN) */}
+            <div className="flex gap-2.5 overflow-x-auto pb-2 scrollbar-none w-full">
               {calendarDays.map((item) => {
                 const isSelected = selectedDate === item.dateStr;
                 return (
                   <button
                     key={item.dateStr}
                     onClick={() => setSelectedDate(item.dateStr)}
-                    className={`flex flex-col items-center justify-center min-w-[56px] h-20 rounded-2xl transition-all ${
-                      isSelected 
-                        ? 'bg-[#93000a] text-white shadow-lg shadow-[#93000a]/30 scale-105 font-bold' 
+                    className={`flex flex-col items-center justify-center min-w-[56px] h-20 rounded-2xl transition-all ${isSelected
+                        ? 'bg-[#93000a] text-white shadow-lg shadow-[#93000a]/30 scale-105 font-bold'
                         : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
-                    }`}
+                      }`}
                   >
                     <span className="text-[10px] tracking-wider uppercase opacity-80 mb-1">{item.dayOfWeek}</span>
                     <span className="text-lg font-semibold">{item.dayNum}</span>
@@ -277,6 +293,7 @@ export default function AdminBookings() {
                 );
               })}
             </div>
+
           </div>
 
           {/* Thanh Tìm kiếm & Lọc */}

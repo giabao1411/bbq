@@ -33,7 +33,53 @@
   display: inline-block;
   line-height: 1;
 }
+/* 1. Đổi màu nền hộp lịch thành màu tối */
+.react-datepicker {
+  background-color: #1a1a1a !important;
+  border: 1px solid #2a2a2a !important;
+  color: #ffffff !important;
+  font-family: inherit;
+}
 
+/* 2. Đổi màu phần Header (Tháng/Năm) và các mũi tên */
+.react-datepicker__header {
+  background-color: #121212 !important;
+  border-bottom: 1px solid #2a2a2a !important;
+}
+.react-datepicker__current-month, 
+.react-datepicker__day-name {
+  color: #e0e0e0 !important;
+}
+
+/* 3. Màu chữ của các ngày trong tháng */
+.react-datepicker__day {
+  color: #ffffff !important;
+}
+/* Khi hover qua các ngày */
+.react-datepicker__day:hover {
+  background-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+/* 4. ĐỔI MÀU ĐỎ CHO NGÀY ĐANG ĐƯỢC CHỌN (Giống nút TH 4 của bạn) */
+.react-datepicker__day--selected, 
+.react-datepicker__day--keyboard-selected {
+  background-color: #da0000 !important; /* Màu đỏ thương hiệu */
+  color: #ffffff !important;
+  border-radius: 4px !important;
+}
+
+
+/* 5. Fix hoàn toàn cho Mobile không bị tràn */
+@media (max-width: 768px) {
+  .react-datepicker-popper {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 99999 !important;
+  }
+}
 
 /* Ép toàn bộ Layout luôn có nền tối đồng bộ */
 body {

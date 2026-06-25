@@ -49,7 +49,7 @@ export default function Header() {
       <Link href="/#menu" className={getNavLinkClass("/menu")}>
         Menu
       </Link>
-      <Link href="/booking" className={getNavLinkClass("/booking")}>
+      <Link href="/booking-history" className={getNavLinkClass("/booking-history")}>
         Reservations
       </Link>
       

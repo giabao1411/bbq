@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import NavUserMobile from '@/components/MenuUserForMobile';
 
+
 // 1. Định nghĩa kiểu dữ liệu (Interface)
 interface Booking {
   id: string;
@@ -23,6 +24,7 @@ export default function BookingHistoryPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState<number>(4);
 
   // Kiểm tra trạng thái đăng nhập và lấy dữ liệu đặt bàn từ Supabase
   useEffect(() => {
@@ -58,6 +60,9 @@ export default function BookingHistoryPage() {
     fetchUserAndBookings();
   }, [router]);
 
+  const handleLoadMore = () => {
+  setVisibleCount((prevCount) => prevCount + 4); // Cộng thêm 2 mục mỗi lần bấm
+};
   // Hàm xử lý hủy đặt bàn
   const handleCancelBooking = async (bookingId: string) => {
     const confirmCancel = window.confirm('Bạn có chắc chắn muốn hủy yêu cầu đặt bàn này không?');
@@ -135,7 +140,8 @@ const generateDisplayCode = (id: any) => {
                 </Link>
               </div>
             ) : (
-              bookings.map((booking) => (
+              <>
+              {bookings.slice(0,visibleCount).map((booking) => (
                 <div 
                   key={booking.id} 
                   className={`bg-zinc-900/30 border border-zinc-800/60 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition duration-200 ${
@@ -227,9 +233,21 @@ const generateDisplayCode = (id: any) => {
                     )}
                   </div>
                 </div>
-              ))
+              ))}
+              {bookings.length > visibleCount && (
+          <div className="text-center pt-4 w-full">
+            <button
+              onClick={handleLoadMore}
+              className="w-full sm:w-auto px-6 py-2.5 border border-zinc-800 hover:border-zinc-700 bg-zinc-900/20 hover:bg-zinc-900/50 text-zinc-400 hover:text-zinc-200 rounded-lg text-xs font-medium uppercase tracking-wider transition duration-200"
+            >
+              Xem thêm lịch sử đặt bàn
+            </button>
+          </div>
+        )}
+              </>
             )}
           </div>
+          
 
           {/* CỘT PHẢI: SIDEBAR THÔNG TIN */}
           <div className="space-y-6">

@@ -5,10 +5,9 @@ import { useAuthStatus } from '@/app/components/AuthButton';
 import { usePathname } from 'next/navigation';
 export default function MenuUserForMobile(){
     const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const { user, avatarUrl, loading, displayName, handleSignOut } = useAuthStatus();
+  const { user, avatarUrl, loading, displayName, handleSignOut,isAdmin } = useAuthStatus();
   const pathName = usePathname();
   const getNavActiveLink = (path : string) => {
-    console.log(path);
     return "flex flex-col items-center justify-center " + (pathName === path? "text-[#ffb3ac] font-bold active:scale-90 transition-transform no-underline":"text-[#c4c7c7] active:scale-90 transition-transform hover:text-[#ffb3ac] no-underline");
   }
   return (<>
@@ -49,7 +48,14 @@ export default function MenuUserForMobile(){
                     <p className="text-xs text-zinc-400">Tài khoản</p>
                     <p className="text-xs font-semibold text-white truncate max-w-[130px]">{displayName}</p>
                   </div>
-                  
+                  {isAdmin &&( <Link 
+                    href="/admin/users" 
+                    className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800 rounded-lg no-underline"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <span className="material-symbols-outlined text-sm">admin_panel_settings</span>
+                   Quản lý hệ thống
+                  </Link>)}
                   <Link 
                     href="/booking-history" 
                     className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 hover:bg-zinc-800 rounded-lg no-underline"

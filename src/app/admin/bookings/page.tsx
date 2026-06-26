@@ -185,6 +185,7 @@ export default function AdminBookings() {
     }
   };
 
+  
   const updateBookingStatus = async (id: string, newStatus: 'pending' | 'completed' | 'cancelled'|'confirmed') => {
     const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id);
     if (error) alert(error.message);
@@ -192,7 +193,7 @@ export default function AdminBookings() {
   };
 
   const filteredBookings = bookings.filter((b) => {
-    const matchesSearch = b.user_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = b.user_name?.toLowerCase().includes(searchQuery.toLowerCase())||b.phone_number?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
     return matchesStatus && matchesSearch;
   });

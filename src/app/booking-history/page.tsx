@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import NavUserMobile from '@/components/MenuUserForMobile';
+import { toast,Toaster } from 'react-hot-toast';
 
 
 // 1. Định nghĩa kiểu dữ liệu (Interface)
@@ -59,6 +60,22 @@ export default function BookingHistoryPage() {
 
     fetchUserAndBookings();
   }, [router]);
+  //Tạo thông chức năng thông báo dùng thay alert 
+  const notiUtils =  (booking: Booking) =>{
+     toast.custom((t) => (
+          <div className="bg-emerald-950 text-white p-4 rounded-lg shadow-lg flex flex-col gap-1 border border-emerald-950 animate-none">
+            <span className="font-bold font-serif text-base"> THÔNG TIN BÀN ĐẶT</span>
+            <span className="text-sm">
+              Bàn <strong>{generateDisplayCode(booking.id)}</strong> ({booking.guests_count} người).
+            </span>
+            <span className="text-sm">
+             Ngày <strong>{formatDateDisplay(booking.booking_date)} </strong> vào lúc <strong>{booking.booking_time.substring(0,5)}</strong>.
+            </span>
+            <span className='text-sm'>Yêu cầu đặc biệt : <strong>{booking.special_requests || "Không có yêu cầu đặc biệt."}</strong></span>
+          </div>
+        ), { id: `alert-${booking.id}`, duration: 5000,  });
+
+  }
 
   const handleLoadMore = () => {
   setVisibleCount((prevCount) => prevCount + 4); // Cộng thêm 2 mục mỗi lần bấm
@@ -111,7 +128,7 @@ const generateDisplayCode = (id: any) => {
   return (
     <div className="min-h-screen bg-[#0E1111] text-white font-sans antialiased selection:bg-red-800">
       
-     
+      <Toaster position="top-right" />
 
       {/* BODY SECTION */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
@@ -218,7 +235,7 @@ const generateDisplayCode = (id: any) => {
                     ) : (
                       <>
                         <button 
-                          onClick={() => alert(`Yêu cầu đặc biệt: ${booking.special_requests || 'Không có ghi chú'}`)}
+                          onClick={() =>  notiUtils(booking)}
                           className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 px-4 rounded text-xs font-medium tracking-wide transition"
                         >
                           Chi tiết

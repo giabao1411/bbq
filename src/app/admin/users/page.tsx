@@ -21,6 +21,14 @@ export default function AdminUsers() {
   const [statusFilter, setStatusFilter] = useState('all');
   const router = useRouter();
   const pathname = usePathname();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 2; // Số lượng thành viên trên mỗi trang (Bạn có thể đổi thành 10, 20...)
+
+  // Reset về trang 1 mỗi khi người dùng thay đổi bộ lọc hoặc tìm kiếm
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter]);
+  
   // 1. Bổ sung State để lưu thông tin Admin/User đang đăng nhập hệ thống
   const [currentUser, setCurrentUser] = useState<{ name: string; avatar: string; role: string } | null>(null);
 // 2. Hàm lấy thông tin tài khoản đang thao tác (đang đăng nhập)
@@ -110,6 +118,15 @@ export default function AdminUsers() {
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
   });
+  // Tính toán chỉ số phân trang thực tế
+  const totalFilteredItems = filteredUsers.length;
+  const totalPages = Math.ceil(totalFilteredItems / itemsPerPage) || 1;
+  
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  
+  // ĐÂY LÀ MẢNG DỮ LIỆU THỰC TẾ DÙNG ĐỂ MAP RA TABLE
+  const currentDisplayedUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
 
   // Đếm số liệu thống kê thực tế từ DB để hiển thị lên 4 ô Cards hàng đầu
   const totalStaff = users.length;
@@ -261,7 +278,7 @@ export default function AdminUsers() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {filteredUsers.map((user) => (
+                  {currentDisplayedUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-white/5 transition-colors group">
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-5">
@@ -312,7 +329,7 @@ export default function AdminUsers() {
                       </td>
                     </tr>
                   ))}
-                  {filteredUsers.length === 0 && (
+                  {currentDisplayedUsers.length === 0 && (
                     <tr>
                       <td colSpan={5} className="text-center py-10 text-sm text-white/40">Không tìm thấy thành viên nào khớp bộ lọc.</td>
                     </tr>
@@ -324,14 +341,46 @@ export default function AdminUsers() {
             {/* Pagination UI bottom */}
             <div className="bg-white/5 px-8 py-5 flex items-center justify-between border-t border-white/5">
               <p className="text-[10px] text-white/50 uppercase tracking-widest">
-                Hiển thị <span className="text-white font-bold">{filteredUsers.length}</span> trên tổng số <span className="text-white font-bold">{totalStaff}</span> thành viên
+                Hiển thị <span className="text-white font-bold">{Math.min(indexOfFirstItem + 1, totalFilteredItems)}</span> đến{' '}
+                <span className="text-white font-bold">{Math.min(indexOfLastItem, totalFilteredItems)}</span> trên tổng số{' '}
+                <span className="text-white font-bold">{totalFilteredItems}</span> thành viên đã lọc
               </p>
+
               <div className="flex items-center gap-2">
-                <button className="p-1.5 rounded-lg bg-white/5 text-white/40 cursor-not-allowed">
+                {/* Nút Quay lại trang trước (Prev) */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={`p-1.5 rounded-lg bg-white/5 transition-colors ${currentPage === 1 ? 'text-white/20 cursor-not-allowed' : 'text-white/80 hover:bg-white/10'
+                    }`}
+                >
                   <span className="material-symbols-outlined text-xs">chevron_left</span>
                 </button>
-                <button className="w-7 h-7 rounded-lg bg-[#93000a] text-white text-xs font-bold">1</button>
-                <button className="p-1.5 rounded-lg bg-white/5 text-white/80 hover:bg-white/10">
+
+                {/* Hiển thị danh sách số trang trực quan */}
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`w-10 h-10 rounded-lg text-xs font-bold transition-all ${currentPage === pageNumber
+                          ? 'bg-[#93000a] text-white shadow-md'
+                          : 'bg-white/5 text-white/60 hover:bg-white/10'
+                        }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+
+                {/* Nút Sang trang tiếp theo (Next) */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={`p-1.5 rounded-lg bg-white/5 transition-colors ${currentPage === totalPages ? 'text-white/20 cursor-not-allowed' : 'text-white/80 hover:bg-white/10'
+                    }`}
+                >
                   <span className="material-symbols-outlined text-xs">chevron_right</span>
                 </button>
               </div>

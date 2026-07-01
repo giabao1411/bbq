@@ -237,7 +237,7 @@ export default function AdminBookings() {
   // Định dạng hiển thị tiêu đề Tháng/Năm (Ví dụ: THÁNG 10, 2023)
   const formatMonthYearHeader = (dateStr: string) => {
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return "THÁNG 10, 2023";
+    if (isNaN(date.getTime())) return "THÁNG 11, 2024";
     return `THÁNG ${date.getMonth() + 1}, ${date.getFullYear()}`;
   };
 
@@ -413,8 +413,9 @@ export default function AdminBookings() {
               >
                 <option value="all">Tất cả trạng thái</option>
                 <option value="pending">Chưa đến</option>
-                <option value="arrived">Đã đến</option>
+                <option value="completed">Đã đến</option>
                 <option value="cancelled">Đã hủy</option>
+                <option value="confirmed">Đã xác nhận</option>
               </select>
             </div>
           </div>
@@ -453,14 +454,24 @@ export default function AdminBookings() {
                   <div className="flex items-center gap-2">
                     {booking.status === 'pending' ? (
                       <>
-                        <button onClick={() => updateBookingStatus(booking.id, 'completed')} className="bg-[#1d2121] border border-white/10 hover:bg-white/10 text-white text-xs px-4 py-2 rounded-xl transition-all font-semibold">CHƯA ĐẾN</button>
+                        <button onClick={() => updateBookingStatus(booking.id, 'confirmed')} className="bg-[#1d2121] border border-white/10 hover:bg-white/10 text-white text-xs px-4 py-2 rounded-xl transition-all font-semibold">XÁC NHẬN BÀN</button>
                         <button onClick={() => updateBookingStatus(booking.id, 'cancelled')} className="p-2 text-white/40 hover:text-red-400 rounded-lg"><span className="material-symbols-outlined text-base">cancel</span></button>
                       </>
                     ) : booking.status === 'completed' ? (
                       <span className="text-[10px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span> ĐÃ ĐẾN
                       </span>
-                    ) : (
+                    ) : booking.status ===  'confirmed'?
+                    <>
+                     <span className="text-[10px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span> ĐÃ XÁC NHẬN
+                      </span>
+                      
+                        <button onClick={() => updateBookingStatus(booking.id, 'completed')} className="bg-[#1d2121] border border-white/10 hover:bg-white/10 text-white text-xs px-4 py-2 rounded-xl transition-all font-semibold">ĐÃ ĐẾN</button>
+                        <button onClick={() => updateBookingStatus(booking.id, 'cancelled')} className="p-2 text-white/40 hover:text-red-400 rounded-lg"><span className="material-symbols-outlined text-base">cancel</span></button>
+                      
+                    </>
+                    : (
                       <span className="text-[10px] font-bold uppercase tracking-[0.15em] px-4 py-1.5 rounded-full bg-white/5 text-white/30 border border-white/5">ĐÃ HỦY</span>
                     )}
                   </div>

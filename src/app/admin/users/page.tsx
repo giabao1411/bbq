@@ -127,6 +127,31 @@ export default function AdminUsers() {
   
   // ĐÂY LÀ MẢNG DỮ LIỆU THỰC TẾ DÙNG ĐỂ MAP RA TABLE
   const currentDisplayedUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+  //Bind Pagination UI
+  const getMiddlePaginationRangePerfect = (currentPage : number , totalPages: number) =>{
+    const delta = 1;
+    const maxVisibleNumbers = delta * 2 + 1;
+    let left = currentPage - delta;
+    let right = currentPage + delta;
+    if(left < 1){
+      left = 1;
+      right = Math.min(totalPages, left + maxVisibleNumbers - 1);
+    }
+    if(right > totalPages){
+      right = totalPages;
+      left = Math.max(1, right - maxVisibleNumbers + 1);
+    }
+    const rangeWithDot : (number | string)[] = []
+
+    if(left > 1)
+      rangeWithDot.push("...");
+    for( let i = left; i <= right ; i++){
+        rangeWithDot.push(i);
+    }
+    if( right < totalPages)
+      rangeWithDot.push("...");
+    return rangeWithDot;
+  }
 
   // Đếm số liệu thống kê thực tế từ DB để hiển thị lên 4 ô Cards hàng đầu
   const totalStaff = users.length;
@@ -347,6 +372,16 @@ export default function AdminUsers() {
               </p>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className={`p-1.5 rounded-lg bg-white/5 transition-colors ${currentPage === 1 ? 'text-white/20 cursor-not-allowed' : 'text-white/80 hover:bg-white/10'
+                    }`}
+                >
+                  <span className="material-symbols-outlined">
+                    keyboard_double_arrow_left
+                  </span>
+                </button>
                 {/* Nút Quay lại trang trước (Prev) */}
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -358,18 +393,28 @@ export default function AdminUsers() {
                 </button>
 
                 {/* Hiển thị danh sách số trang trực quan */}
-                {Array.from({ length: totalPages }, (_, index) => {
-                  const pageNumber = index + 1;
+                {getMiddlePaginationRangePerfect(currentPage, totalPages).map((page, index) => {
+                  if (page === '...') {
+                    return (
+                      <span
+                        key={`dots-${index}`}
+                        className="p-1.5 rounded-lg bg-white/5 transition-colors text-white/20 cursor-not-allowed"
+                      >
+                        ...
+                      </span>
+                    );
+                  }
+                  const isCurrent = currentPage === page;
                   return (
                     <button
-                      key={pageNumber}
-                      onClick={() => setCurrentPage(pageNumber)}
-                      className={`w-10 h-10 rounded-lg text-xs font-bold transition-all ${currentPage === pageNumber
+                      key={`page-${page}`}
+                      onClick={() => setCurrentPage(Number(page))}
+                      className={`w-10 h-10 rounded-lg text-xs font-bold transition-all ${ isCurrent
                           ? 'bg-[#93000a] text-white shadow-md'
                           : 'bg-white/5 text-white/60 hover:bg-white/10'
                         }`}
                     >
-                      {pageNumber}
+                      {page}
                     </button>
                   );
                 })}
@@ -382,6 +427,17 @@ export default function AdminUsers() {
                     }`}
                 >
                   <span className="material-symbols-outlined text-xs">chevron_right</span>
+                </button>
+                {/* 5. Nút đến trang CUỐI (») */}
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className={`p-1.5 rounded-lg bg-white/5 transition-colors ${currentPage === totalPages ? 'text-white/20 cursor-not-allowed' : 'text-white/80 hover:bg-white/10'
+                    }`}
+                >
+                  <span className="material-symbols-outlined">
+                    keyboard_double_arrow_right
+                  </span>
                 </button>
               </div>
             </div>

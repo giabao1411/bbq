@@ -268,7 +268,6 @@ export default function AdminBookings() {
         user_name: (Array.isArray(b.profiles) ? b.profiles[0]?.full_name : b.profiles?.full_name) ?? 'Khách vãng lai'
       }));
       setBookings(normalizedBookings);
-      // console.log(data);
     } else {
 
       setBookings([]); // Ngày khác mặc định trống để chờ bạn thêm mới dữ liệu dữ trữ
@@ -293,12 +292,7 @@ export default function AdminBookings() {
     return "flex flex-col items-center justify-center" + (pathname === path ? " text-white" : " text-white/40");
   };
 
-  // Kích hoạt ô chọn lịch ẩn khi click nút "Xem lịch"
-  // const handleOpenCalendar = () => {
-  //   if (dateInputRef.current) {
-  //     dateInputRef.current.showPicker(); // Hàm tiêu chuẩn kích hoạt giao diện Lịch của trình duyệt
-  //   }
-  // };
+  
 
   return (
     <div className="flex min-h-screen overflow-hidden font-body-md bg-[#0c0f0f] text-[#e2e2e2]">
@@ -543,27 +537,6 @@ export default function AdminBookings() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-white/50 uppercase tracking-wider">Ngày đến</label>
-                  {/* <DatePicker
-                    // Thư viện này cần giá trị là đối tượng Date, nên ta cần convert từ chuỗi yyyy-mm-dd của bạn ra
-                    selected={formData.booking_date ? new Date(formData.booking_date) : null}
-
-                    // Khi đổi ngày, ta lại convert ngược về chuỗi yyyy-mm-dd để lưu vào state cũ của bạn
-                    onChange={(date: Date |null) => {
-                      if (date) {
-                        const yyyy = date.getFullYear();
-                        const mm = String(date.getMonth() + 1).padStart(2, '0');
-                        const dd = String(date.getDate()).padStart(2, '0');
-                        setFormData({ ...formData, booking_date: `${yyyy}-${mm}-${dd}` });
-                      }
-                    }}
-
-                    locale="vi"               // Ép buộc hiển thị Tiếng Việt
-                    dateFormat="dd/MM/yyyy"   // Định dạng chuẩn Việt Nam
-                    required
-
-                    // Giữ nguyên toàn bộ CSS giao diện tối (Dark mode) của bạn
-                    className="w-full bg-[#1a1d1d] text-sm text-white px-4 py-3 rounded-xl border border-white/5 focus:outline-none focus:border-[#93000a]"
-                  /> */}
                   <input
                     type="date"
                     value={formData.booking_date}

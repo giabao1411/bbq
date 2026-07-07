@@ -207,11 +207,29 @@ export default function HomePage() {
                 <span className="material-symbols-outlined">arrow_forward</span>
               </button>
             </div>
-          </div>
-        </section>
+        </div>
+      </section>
+      <section className="min-h-screen flex items-center justify-center py-16 px-4 bg-[#121414] relative overflow-hidden">
+        <div className="w-full max-w-3xl mx-auto relative z-10 flex flex-col items-center">
 
+          <h2 className="text-white text-3xl font-bold mb-6">Bản đồ</h2>
+
+          {/* Container bọc ngoài iframe để xử lý responsive theo tỷ lệ */}
+          <div className="w-full aspect-[4/3] sm:aspect-[16/9] rounded-lg overflow-hidden shadow-lg">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15303.62916268016!2d107.56575278715819!3d16.480231400000008!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3141a1da66922c61%3A0x4510291d9d47a43a!2zUXXDoW4gbmjhuq11IFTDvQ!5e0!3m2!1svi!2s!4v1783394383966!5m2!1svi!2s"
+              className="w-full h-full invert-[90%] hue-rotate-[180deg] contrast-[120%]" // Thay thế width="600" height="450" bằng class này
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+            ></iframe>
+          </div>
+
+        </div>
+      </section>
         {/* Newsletter / CTA */}
-        <section className="py-16 px-[20px] text-center bg-[#121414] relative overflow-hidden">
+        <section className="py-16 px-[20px] text-center bg-[#121414] relative overflow-hidden"> 
           <div className="max-w-3xl mx-auto relative z-10">
             <h2 className="font-serif text-4xl font-bold mb-4">Nhận Ưu Đãi Đặc Biệt</h2>
             <p className="text-[#c4c7c7] text-lg mb-8">Đăng ký để nhận thông tin về các món mới và ưu đãi độc quyền dành riêng cho khách hàng thân thiết.</p>

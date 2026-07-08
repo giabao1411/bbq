@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import HeaderAdmin from '@/components/HeaderAdmin';
-import { useRouter, usePathname } from "next/navigation";
+import FooterAdmin from'@/components/FooterAdmin'
 import { toast, Toaster } from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css'; // Import file CSS gốc
@@ -31,8 +31,7 @@ interface CalendarDay {
 registerLocale('vi', vi);
 
 export default function AdminBookings() {
-  const router = useRouter();
-  const pathname = usePathname();
+ 
   // const dateInputRef = useRef<HTMLInputElement>(null);
 
   // State quản lý danh sách đặt bàn và bộ lọc
@@ -288,9 +287,7 @@ export default function AdminBookings() {
     return matchesStatus && matchesSearch;
   });
 
-  const getNavLinkClass = (path: string) => {
-    return "flex flex-col items-center justify-center" + (pathname === path ? " text-white" : " text-white/40");
-  };
+  
 
   
 
@@ -482,12 +479,7 @@ export default function AdminBookings() {
         </section>
 
         {/* Mobile Nav */}
-        <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 bg-[#121414]/95 backdrop-blur-lg border-t border-white/5">
-          <a className={getNavLinkClass("/")} href="/"><span className="material-symbols-outlined">home</span><span className="text-[10px] uppercase font-bold mt-1">Trang chủ</span></a>
-          <a className={getNavLinkClass("/admin/users")} href="/admin/users"><span className="material-symbols-outlined">group</span><span className="text-[10px] uppercase font-bold mt-1">Người dùng</span></a>
-          <a className={getNavLinkClass("/#menu")} href="/#menu"><span className="material-symbols-outlined">menu_book</span><span className="text-[10px] uppercase font-bold mt-1">Món ăn</span></a>
-          <a className={getNavLinkClass("/admin/bookings")} href="/admin/bookings"><span className="material-symbols-outlined">event_available</span><span className="text-[10px] uppercase font-bold mt-1">Đặt bàn</span></a>
-        </nav>
+       <FooterAdmin/>
       </main>
       {/* MODAL THÊM ĐẶT BÀN MỚI */}
       {isModalOpen && (

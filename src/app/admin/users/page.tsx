@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import HeaderAdmin from '@/components/HeaderAdmin';
-import { useRouter, usePathname } from "next/navigation";
+import FooterAdmin from '@/components/FooterAdmin';
 interface UserProfile {
   id: string;
   full_name: string | null;
@@ -19,8 +19,7 @@ export default function AdminUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const router = useRouter();
-  const pathname = usePathname();
+  
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 2; // Số lượng thành viên trên mỗi trang (Bạn có thể đổi thành 10, 20...)
 
@@ -157,13 +156,7 @@ export default function AdminUsers() {
   const totalStaff = users.length;
   const activeStaff = users.filter(u => u.status === 'active').length;
   const pendingStaff = users.filter(u => u.status === 'pending').length;
-  const getNavLinkClass = (path: string) => {
-    const baseClass = "flex flex-col items-center justify-center";
-    const activeClass = " text-white";
-    const inactiveClass = " text-white/40";
-
-    return baseClass + (pathname === path ? activeClass : inactiveClass);
-  };
+ 
 
   return (
     <div className="flex min-h-screen overflow-hidden font-body-md bg-[#0c0f0f] text-[#e2e2e2]">
@@ -445,24 +438,7 @@ export default function AdminUsers() {
         </section>
 
         {/* Mobile Navigation (Bottom Bar) */}
-        <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-20 px-4 bg-[#121414]/95 backdrop-blur-lg border-t border-white/5">
-          <a className={getNavLinkClass("/")} href="/">
-            <span className="material-symbols-outlined">home</span>
-            <span className="text-[10px] uppercase font-bold mt-1">Trang chủ</span>
-          </a>
-          <a className={getNavLinkClass("/admin/users")} href="/admin/users">
-            <span className="material-symbols-outlined">group</span>
-            <span className="text-[10px] uppercase font-bold mt-1">Người dùng</span>
-          </a>
-          <a className={getNavLinkClass("/#menu")} href="/#menu">
-            <span className="material-symbols-outlined">menu_book</span>
-            <span className="text-[10px] uppercase font-bold mt-1">Món ăn</span>
-          </a>
-          <a className={getNavLinkClass("/admin/bookings")} href="/admin/bookings">
-            <span className="material-symbols-outlined transition-transform group-hover:scale-110">event_available</span>
-            <span className="text-sm font-medium tracking-wide">Quản lý đặt bàn</span>
-          </a>
-        </nav>
+       <FooterAdmin/>
       </main>
     </div>
   );

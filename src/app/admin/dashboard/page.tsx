@@ -3,12 +3,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import HeaderAdmin from '@/components/HeaderAdmin'
 import Link from 'next/link';
-import { useRouter, usePathname } from "next/navigation";
 import FooterAdmin from '@/components/FooterAdmin'
-import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  AreaChart, Area, Cell
+  AreaChart, Area
 } from 'recharts';
 interface DashboardData {
   metrics: {
@@ -23,27 +21,11 @@ export default function AdminDashBoard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter_type, setFilterType] = useState('this_week');
-  // const [todayBookings, setTodayBookings] = useState(0);
-  // const fetchTodayBookings = async () => {
-  //   const today = new Date().toISOString().split('T')[0];
-  //   const { data, error } = await supabase.from('bookings')
-  //     .select('*', { count: 'exact' })
-  //     .gte('created_at', today);
-  //   if (error) {
-  //     console.log('Lỗi ' + error)
-  //   }
-  //   if (data) {
-
-  //   }
-
-  // }
+  
   useEffect(() => {
     async function fetchDashboardData() {
       try {
         setLoading(true);
-
-        // MÔ PHỎNG DỮ LIỆU THỰC TẾ TRẢ VỀ TỪ SUPABASE (CHỈ GỒM BOOKING & USER)
-        // (Bạn có thể thay thế bằng logic await supabase.from().select() thực tế)
         const { data, error } = await supabase.rpc('get_dashboard_data', { filter_type: filter_type })
         if (error) {
           console.error('Lỗi khi lấy dữ liệu dashboard:', error)
@@ -96,10 +78,6 @@ export default function AdminDashBoard() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             {/* Metric 1: Booking */}
-
-
-
-
             <div className="bg-white/5 border border-white/5 p-6 rounded-2xl flex flex-col justify-between">
               <div className="flex justify-between items-center mb-4">
                 <p className="font-label-sm text-on-surface-variant uppercase tracking-widest">Lượt đặt bàn hôm nay</p>
@@ -128,8 +106,6 @@ export default function AdminDashBoard() {
           {/* CHARTS GRID                     */}
           {/* ------------------------------- */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-            {/* CHART 1: BOOKING ANALYSIS (Đã sửa lỗi lệch cột, lỗi TS và tối ưu Responsive) */}
             <section className="lg:col-span-12 bg-[#121414] border border-[#2d2c30] rounded-2xl p-6">
               <div className="flex justify-between items-center mb-md">
                 <div>
@@ -171,17 +147,15 @@ export default function AdminDashBoard() {
                       itemStyle={{ color: '#fff' }}
                     />
 
-                    {/* VẼ ĐỒNG THỜI CẢ THANH NỀN VÀ CỘT THỰC TẾ TRÊN CÙNG MỘT TRỤC TỌA ĐỘ */}
+                   
                     <Bar
                       dataKey="bookings"
                       shape={(props: any) => {
                         // Lấy chính xác tọa độ x, y và độ rộng width tự động từ hệ thống Recharts
                         const { x, y, width, height, payload } = props;
-
                         // 1. Lấy chiều cao và tọa độ y tối đa của khung đồ thị
                         const bgHeight = props.background?.height || 220;
                         const bgY = props.background?.y || 10;
-
                         // 2. Định hình màu sắc cho cột thực tế dựa vào ngày (payload)
                         let barColor = "#555555"; // Màu xám mặc định cho các ngày thường
                         if (payload && payload.day === "Chủ Nhật") barColor = "#800000"; // Đỏ nhung trầm
@@ -224,8 +198,6 @@ export default function AdminDashBoard() {
                 </ResponsiveContainer>
               </div>
             </section>
-
-            {/* CHART 2: USER GROWTH TREND (AREA CHART) - Kéo rộng ra chiếm 12 cột do bỏ phần loại bàn */}
             <section className="lg:col-span-12 bg-[#121414] border border-[#2d2c30] rounded-2xl p-6 w-full flex flex-col justify-between">
               <div className="mb-6">
 
@@ -251,7 +223,6 @@ export default function AdminDashBoard() {
 
               <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4 px-2">
                 <div className="flex items-center gap-2">
-                  {/* Thay màu hồng nhạt khớp với đường line stroke của Area */}
                   <div className="w-2.5 h-2.5 rounded-full bg-[#ffb3ac]"></div>
                   <span className="text-xs font-medium text-gray-400">Thành viên mới</span>
                 </div>

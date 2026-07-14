@@ -21,7 +21,7 @@ export default function AdminUsers() {
   const [statusFilter, setStatusFilter] = useState('all');
   
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 2; // Số lượng thành viên trên mỗi trang (Bạn có thể đổi thành 10, 20...)
+  const itemsPerPage = 2; // Số lượng thành viên trên mỗi trang
 
   // Reset về trang 1 mỗi khi người dùng thay đổi bộ lọc hoặc tìm kiếm
   useEffect(() => {

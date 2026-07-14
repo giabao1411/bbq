@@ -1,4 +1,4 @@
-'use client'; // Bắt buộc phải ở dòng đầu tiên của file
+'use client'; 
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import NavUserMobile from '@/components/MenuUserForMobile';
 import { toast,Toaster } from 'react-hot-toast';
 
 
-// 1. Định nghĩa kiểu dữ liệu (Interface)
+
 interface Booking {
   id: string;
   booking_date: string;
@@ -19,7 +19,7 @@ interface Booking {
   created_at: string;
 }
 
-// 2. Component chính và là EXPORT DEFAULT duy nhất của file
+
 export default function BookingHistoryPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
